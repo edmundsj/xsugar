@@ -11,6 +11,7 @@ from numpy.testing import assert_equal, assert_allclose
 from xsugar import Experiment, assertDataDictEqual
 from ast import literal_eval
 from itertools import zip_longest
+from pathlib import Path
 
 
 def testExtractConstants(exp, exp_data):
@@ -149,7 +150,9 @@ def testLoadData(exp, exp_data):
     assert_frame_equal(data_actual, data_desired)
 
 def testLoadXRDData():
-    exp = Experiment(name='TEST1', kind='test_permanent')
+    file_location = os.path.dirname(os.path.abspath(__file__))
+    base_path = file_location + '/data'
+    exp = Experiment(name='TEST1', kind='test', base_path=base_path)
     exp.loadXRDData()
     data_desired = pd.DataFrame({
         'Angle (deg)': [69.05, 69.055, 69.06, 69.065, 69.07,69.075,69.08,
@@ -160,7 +163,9 @@ def testLoadXRDData():
     assert_frame_equal(data_actual, data_desired)
 
 def testLoadXRDMetadata():
-    exp = Experiment(name='TEST1', kind='test_permanent')
+    file_location = os.path.dirname(os.path.abspath(__file__))
+    base_path = file_location + '/data'
+    exp = Experiment(name='TEST1', kind='test', base_path=base_path)
     exp.loadXRDData()
     metadata_desired = {
         'date': '02/10/2021',
