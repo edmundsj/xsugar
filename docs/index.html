@@ -384,7 +384,7 @@ with the metadata truncated, experiment name included</p>
 
 <dl class="py method">
 <dt id="experiments.Experiment.plot">
-<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param">data_dict=None</em>, <em class="sig-param">average_along=None</em>, <em class="sig-param">quantity_func=None</em>, <em class="sig-param">quantity_name='Value'</em>, <em class="sig-param">representative=''</em>, <em class="sig-param">plotter=&lt;function default_plotter&gt;</em>, <em class="sig-param">theory_func=None</em>, <em class="sig-param">theory_param_dict=None</em>, <em class="sig-param">postfix=''</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.plot" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param">data_dict=None</em>, <em class="sig-param">average_along=None</em>, <em class="sig-param">quantity_func=None</em>, <em class="sig-param">quantity_name='Value'</em>, <em class="sig-param">representative=''</em>, <em class="sig-param">plotter=&lt;function default_plotter&gt;</em>, <em class="sig-param">theory_func=None</em>, <em class="sig-param">theory_kw=None</em>, <em class="sig-param">postfix=''</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.plot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates figures from loaded data. Currently assumes the data is in
 the form of a pandas array.</p>
 <dl class="field-list simple">
@@ -395,7 +395,7 @@ the form of a pandas array.</p>
 <li><p><strong>fig_ax_func</strong> – Function to generate fig, ax</p></li>
 <li><p><strong>representative</strong> – Which axis to generate a representative plot along (i.e. “replicate”. Defaults to None)</p></li>
 <li><p><strong>theory_func</strong> – Theoretical values the data should take. Assumes a function of the form y = f(x, kwargs).</p></li>
-<li><p><strong>theory_param_dict</strong> – Parameters to feed into theory function. Should be a dictionary with the same names as the data_dict</p></li>
+<li><p><strong>theory_kw</strong> – Parameters to feed into theory function. Should be a dictionary with the same names as the data_dict</p></li>
 </ul>
 </dd>
 </dl>
