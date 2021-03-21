@@ -529,7 +529,7 @@ class Experiment:
     def plot(
         self, data_dict=None, average_along=None,
         quantity_func=None, quantity_name = 'Value', representative='',
-        plotter=default_plotter, theory_func=None, theory_param_dict=None,
+        plotter=default_plotter, theory_func=None, theory_kw=None,
         postfix='', **kwargs):
         """
         Generates figures from loaded data. Currently assumes the data is in
@@ -540,7 +540,7 @@ class Experiment:
         :param fig_ax_func: Function to generate fig, ax
         :param representative: Which axis to generate a representative plot along (i.e. "replicate". Defaults to None)
         :param theory_func: Theoretical values the data should take. Assumes a function of the form y = f(x, kwargs).
-        :param theory_param_dict: Parameters to feed into theory function. Should be a dictionary with the same names as the data_dict
+        :param theory_kw: Parameters to feed into theory function. Should be a dictionary with the same names as the data_dict
         """
         if average_along:
             if postfix != '': postfix += self.major_separator
