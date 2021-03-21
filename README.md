@@ -40,6 +40,8 @@ def measure_output(cond):
     return data
 
 exp = Experiment(name='REFL1', kind='photocurrent', base_path='/home/jordan/experimental_directory/', measure_func=measure_output, wavelength=wavelength, temperature=temperaturesampling_frequency=sampling_frequency)
+exp.Execute()
+exp.plot()
         
 ```
 
