@@ -10,6 +10,11 @@ dependencies:
   - numpy
   - pandas
   - pip
+  - pip:
+    - sugarplot
+    - spectralpy
+    - sciparse
+    - scippy
   - pyserial
   - pyvisa
   - scipy
