@@ -8,20 +8,23 @@ Often in my Ph.D. I found myself doing the same thing over and over again: writi
 - Automation of data parsing, saving, with support for arbitrary numerical datasets
 - Intelligent data plotting and figure generation
 
+## Documentation
+Documentation can be found on [github.io](https://edmundsj.github.io/xsugar/)
+
 ## Getting Started
 
 ### Installing the python module
 Soon, this software should be pip-installable, and the following should work:
 
 ```
-pip install expx
+pip install xsugar
 ```
 
 ## Simple Example
 In this experiment we gonig change two factors: the wavelength of an optical source and the temperature. We are going to measure the intensity (which I've just fudged to be a sinewave). 
 
 ```
-from expx import Experiment
+from xsugar import Experiment
 import numpy as np
 import pandas as pd
 

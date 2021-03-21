@@ -12,8 +12,8 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../source/'))
-sys.path.insert(0, os.path.abspath('../../test/'))
+sys.path.insert(0, os.path.abspath('../../xsugar/source/'))
+sys.path.insert(0, os.path.abspath('../../xsugar/test/'))
 
 # These two don't currently work - I need to figure out how to change my conda environment
 #import pockels_modulator.simulations.meep_AlN_reflectance_spectra
