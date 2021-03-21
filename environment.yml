@@ -15,6 +15,7 @@ dependencies:
     - spectralpy
     - sciparse
     - pytest
+    - pytest-cov
     - scippy
   - pyserial
   - pyvisa
