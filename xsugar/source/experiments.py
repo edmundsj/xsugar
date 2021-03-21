@@ -29,7 +29,7 @@ class Experiment:
             base_path = str(Path.home())
         if 'LOGNAME' in os.environ:
             if os.environ['LOGNAME'] == 'jordan.e':
-                base_path += '/Google Drive/GTD/PhD/docs/pockels_modulator/'
+                base_path += '/Google Drive/GTD/PhD/docs/pockels_modulator'
         self.major_separator = '~'
         self.minor_separator = '-'
         self.name = name
@@ -41,11 +41,11 @@ class Experiment:
         self.measure_func = measure_func
 
         if kind == 'designs' or kind == 'design':
-            self.data_full_path = base_path + 'designs/'+ name + '/data/'
-            self.figures_full_path = base_path + 'designs/' + name + '/figures/'
+            self.data_full_path = base_path + '/designs/'+ name + '/data/'
+            self.figures_full_path = base_path + '/designs/' + name + '/figures/'
         else:
-            self.data_full_path = self.base_path + 'data/' + kind + '/' + name + '/'
-            self.figures_full_path = self.base_path + 'figures/' + kind + '/' + name + '/'
+            self.data_full_path = self.base_path + '/data/' + kind + '/' + name + '/'
+            self.figures_full_path = self.base_path + '/figures/' + kind + '/' + name + '/'
         self.factors = {k:v for k, v in kwargs.items() \
              if isinstance(v, (list, np.ndarray))}
         self.constants = {k:v for k, v in kwargs.items() \
