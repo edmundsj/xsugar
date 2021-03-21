@@ -1,95 +1,63 @@
-# Template Github Repository
-[![Build](https://github.com/edmundsj/template/actions/workflows/python-package-conda.yml/badge.svg)](https://github.com/edmundsj/template/actions/workflows/python-package-conda.yml) [![docs](https://github.com/edmundsj/template/actions/workflows/build-docs.yml/badge.svg)](https://github.com/edmundsj/template/actions/workflows/build-docs.yml ) [![codecov](https://codecov.io/gh/edmundsj/tabularasa/branch/main/graph/badge.svg?token=7L4PK4K0P3)](https://codecov.io/gh/edmundsj/tabularasa)
+# expx - Experimental Scripting Extras
+[![Build](https://github.com/edmundsj/template/actions/workflows/python-package-conda.yml/badge.svg)](https://github.com/edmundsj/template/actions/workflows/python-package-conda.yml)
 
-This is a template repository for python projects which use sphinx for
-documentation, github actions for building, pytest and codecov for test
-coverage.
-
-
-## Getting Started
-0. Choose a name for the new repository. Make sure it's available as a name on [testPyPi](https://test.pypi.org/)
-  and [PyPi](https://pypi.org/). Create a new directory with that chosen module name.
-
-1. Create a new repository on github by clicking "Use this template"
-
-
-2. Clone this repository into your new directory
-
-    ```git clone https://github.com/edmundsj/<MODULE_NAME>.git <MODULE_NAME>```
-
-2. Set github pages to use the ``docs/`` folder for github pages at the bottom of the "Settings" page
-
-3. Add this repositry to codecov: https://app.codecov.io/gh/edmundsj, and add the CODECOV_TOKEN secret to the github repository. You may need to login to codecov to refresh the repositories.
-
-4. Create a new authentication token on testPyPi and add it as a github secret named ``test_pypi_token``\*
-
-5. Create a new authentication token on PyPi and add it as a github secret named ``pypi_token``\*
-
-6. Navigate into the cloned repository, and run the setup script. This will change all the names in the relevant setup files. If this does not work, see the end of the tutorial.:
-
-    ```python repo_setup.py```
-
-7. If desired, once the build on the remote server finishes, replace the tokens from testPyPi and pyPi with ones that are restricted to this pyPi project. Delete the old ones.
-8. Create a status badge from the '... -> Create Status Badge' in the github actions area separately for docs and build, and paste them in the README, as well as from codecov. Add a project description in "SETUP.py" and fill out the sections of the downloaded README.
-
-
-Done! Your repository should be viewable on github pages: 
-https://edmundsj.github.io/REPO_NAME/
-
-* Note - since the package does not already exist on pyPi or testPyPi you will need to create a token that has access to all your projects. This obviously isn't an optimal way of doing things, and this should really be changed. I may want to add a setup script which does all the renaming, changes github hooks, and does an initial deploy to pypi and testpypi. If you want after the first push, you can create a new token restricted to the newly-pushed project.
-
-If step 6 does not work, you may need to do a git pull before execution. If that doesn't work, you can execute the following manually:
-
-6a. Change the git hooks location:
-
-    ```git config core.hooksPath .hooks```
-6b. Change this repository's name with 
-
-   ```git remote set-url origin <NEW_REPO_URL>```
-6c. In the ``setup.py``, ``.hooks/pre-commit``, and ``.github/workflows/python-package-conda`` files, change all instances of "pytemplate" to "MODULE_NAME". 
-
-6d. Push to the new repository 
-
-    ```git push -u origin main```
+Often in my Ph.D. I found myself doing the same thing over and over again: writing a script to execute an experiment, and writing a script to parse, analyze, and plot the data. These scripts would always be saving data and figures to roughly the same place, and the general process carried out was the same. I came to realize if the data is numerical and tabular, and the experimental design relies on a finite number of conditions, much of this process can (and should) be automated. This package is my attempt to do that.
 
 ## Features
+- Full factorial experiment generation for N factors
+- Automation of data parsing, saving, with support for arbitrary numerical datasets
+- Intelligent data plotting and figure generation
 
-- Github actions unit test integration via pytest
-- Github actions package management with conda
-- Github actions documentation build using sphinx and reST/markdown, with auto
-self-push to repository after successful build
-- Github pages documentation hosting/integration
-- Local commits hooks run full test suite
-- Coverage uploaded automatically to codecov after successful build
-- [FUTURE] Auto-deploy to pyPi/testpyPi after successful build
+## Getting Started
 
-## Common Issues
-- Re-running builds on github actions will cause them to fail, as the build number deployed to PyPi depends on the github run number, which does not change if you restart a build.
-- Pypi deploy is a little slower than test pypi, so it may not always be downloading the latest version.
+### Installing the python module
+Soon, this software should be pip-installable, and the following should work:
 
+```
+pip install expx
+```
 
-## How to Use
-### Adding Additional Unit Tests
-- Any time you want to add additional unit tests just add them to those in the
-``tests/`` directory and prepend with the name ``test``. These will be
-automatically found by pytest and run during local commits and remote builds.
+## Simple Example
+In this experiment we gonig change two factors: the wavelength of an optical source and the temperature. We are going to measure the intensity (which I've just fudged to be a sinewave). 
 
-### Writing the Documentation
-- The documentation source is located in ``docs/source`` and is written in
-restructured text (markdown is also available).
+```
+from expx import Experiment
+import numpy as np
+import pandas as pd
 
-### Building the Documentation
-Simply run ``make html`` from the ``docs/`` directory. This will compile the
-files in the ``docs/source/`` directory, and place them in the main ``docs/``
-directory where github pages can find them.
+wavelength = [500, 600, 700]
+temperature = [25, 35]
+sampling_frequency = 10000
+measurement_time = 0.01
 
-## Dependencies / Technologies Used
-- [Sphinx](http://www.sphinx-doc.org/)
-- [pytest](https://docs.pytest.org/en/stable/index.html)
-- [Github Actions](https://github.com/features/actions)
-- [Codecov](https://codecov.io/)
-- [Github Pages](https://pages.github.com/)
+def measure_output(cond):
+    time = np.arange(0, 1 / cond['sampling_frequency'], cond['measurement_time'])
+    data = np.sin(time)
+    data = pd.DataFrame({'Time (ms)': time, 'Current (nA)': data})
+    return data
 
-## Acknowledgements
-Thanks to all the great people on stack overflow and github, for their
-seemingly boundless tolerance to my and others' questions. 
+exp = Experiment(name='REFL1', kind='photocurrent', base_path='/home/jordan/experimental_directory/', measure_func=measure_output, wavelength=wavelength, temperature=temperaturesampling_frequency=sampling_frequency)
+        
+```
+
+## Terminology and Architecture
+This module is designed to run **experiments**, which consist of a number experimental **conditions** in which the experimenter manipulates zero or more **factors**. These conditions also have associated **metadata**. 
+
+In this module I use the term **factors** to refer to an experimental variable that is deliberately manipulated by the experimenter<sup>1</sup>. Each unique combination of factors used in an experiment I refer to as a **condition**. If you wish to run replicates with identical factors, the replicate number is considered (for the purposes of this module) a factor, and part of an experimental condition. Each experimental **condition** also has a set of **metadata** associated with it. This might be unique to the condition (i.e. with the time and date the experiment was run), or it might be common to all conditions (i.e. the sampling frequency used to aquire data). 
+
+Each experiment is assumed to have a unique **name**, which should not contain any hyphens (-) or tildes (~). All other characters are permitted. This name should be unique to the experiment and easy to recall (i.e. CVDDOP1 or HIPPONEURON1). The experiment may also have an optional **identifier** (i.e. 1), where many similar experiments are being done. Experiments are assumed to also have a **kind**, which is just an additional way of categorizing experiments.
+
+All experimental data exists inside a single **base directory**. Inside this **base directory**, this module will create (if it does not already exist) a folder called **data/**, and a folder called **figures/**. Inside each of these folders, there will be subfolders for each experimental **kind**, and within those folders, folders with each unique experimental **name**, where the data or figures will be stored.
+
+Each experiment involves the measurement of some quantity, via a **measurement function**. This function should take as a single argument, a dictionary which contains the full experimental condition (the levels of all the factors, plus any associated metadata), and it should return the measured data, which should be in the form of a scalar, a numpy array, or a pandas DataFrame. The data returned by a measurement function will be saved in a filename that combines the factors and their current levels with the experimental name using tildes and underscores (i.e. if the name is "TEST1", kind is "photocurrent", and the factors are wavelength, which is currently at a value of 2, and temperature, at a value of 25, the filename will be TEST1~wavelength-2~temperature-25.csv, and will be saved in the "photocurrent" directory within the base directory.). 
+
+After the data is measured, you may want to extract a quantity from each of your datasets (for example, the mean value of measured photocurrent). You can do this with **quantity functions**. These functions should take two arguments: the data and the experimental condition. They may also take any number of additional keyword arguments as desired, for example, to parameterize curve fitting. These quantity functions can be used directly or passed in as an argument to the plotting / analysis methods. When extracting desired quantities, you can take the average result (along a given factor), or representative result. These quantities may be scalars, or they may transform the data (such as extracting a power spectral density).
+
+Finally, you may want to generate figures from the raw data, or from the derived quantities. Plotting the raw data is the default behavior, but if you supply a quantity function to the plotting function, it will generate a set of plot families for that derived quantity. If the derived quantity is a dataset itself, the plotter will just generate one plot for condition. If the derived quantity is a scalar, the behavior is more complex.
+
+If the derived quantity is a scalar (for example full-width-half-max for a curve fitting procedure on a dataset) the default method of figure generation is to combinatorially generate a set of all possible plot families. For example, if two factors are involved, there will be two plots. One plot will have factor 1 on the x-axis, and several curves which correspond to different levels of factor 2. The other plot will have factor 2 on the x-axis, and different curves which correspond to varying levels of factor 1.
+
+If there are three factors, this procedure is repeated. First factor 1 is placed on the x-axis, and the number of figures generated this will be the number of levels of factor 2 plus the number of levels of factor 3. Then factor 2 will be placed on the x-axis, and so on. This plotting scheme is designed to work with N factors, each of which have any number of levels. This can generate a large number of plots, so plots with a given x-axis can be excluded or included specifically with arguments to the plotting function.
+
+<sup>1</sup> I decided not to use "variable" because of how overloaded it is in the context of programming. 
+

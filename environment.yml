@@ -1,21 +1,15 @@
-name: anaconda-client-env
+name: base
 channels:
   - anaconda
   - conda-forge
   - defaults
 dependencies:
-  - pip
-  - flake8
   - coverage
-  - pytest
-  - pytest-cov
   - coveralls
   - matplotlib
   - numpy
   - pandas
-  - pip:
-    - sphinxcontrib-bibtex
-    - pint
+  - pip
   - pyserial
   - pyvisa
   - scipy
@@ -24,3 +18,4 @@ dependencies:
   - sphinxcontrib-jsmath
   - setuptools
   - wheel
+  - pyyaml

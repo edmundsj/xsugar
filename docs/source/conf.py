@@ -6,11 +6,38 @@
 
 # -- Path setup --------------------------------------------------------------
 
+# If extensions (or modules to document with autodoc) are in another directory,
+# add these directories to sys.path here. If the directory is relative to the
+# documentation root, use os.path.abspath to make it absolute, like shown here.
+#
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../xsugar/source/'))
-sys.path.insert(0, os.path.abspath('../../xsugar/test/'))
+sys.path.insert(0, os.path.abspath('../../source/'))
+sys.path.insert(0, os.path.abspath('../../test/'))
 
+# These two don't currently work - I need to figure out how to change my conda environment
+#import pockels_modulator.simulations.meep_AlN_reflectance_spectra
+#import pockels_modulator.simulations.meep_mirror_reflectance_spectra
+#import pockels_modulator.simulations.rcwa_bragg_mirror
+
+#from pockels_modulator.processing_code.XRD import generate_figures
+#from pockels_modulator.processing_code.raman import generate_figures
+#from pockels_modulator.processing_code.iv_curves import BRK1
+#from pockels_modulator.processing_code.LCR import ALN5_6, IMP1
+#from pockels_modulator.processing_code.photocurrent import BRAGG1, REFL1
+
+#generate_transfer_functions, \
+#generate_xrd_figures, \
+#generate_xrd_figures, \
+#generate_raman_figures, \
+#generate_blackbody_figure, \
+#generate_electronics_figures, \
+#generate_fft_figures, \
+#generate_meep_predictions, \
+#generate_cv_curves, \
+#generate_lcr_curves, \
+#generate_adc_figures, \
+#generate_bragg_figures, \
 
 # -- Project information -----------------------------------------------------
 
