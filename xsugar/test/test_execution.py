@@ -1,7 +1,7 @@
 """
 Tests data reading and writing operation, along with condition generation
 """
-import unittest
+import pytest
 import numpy as np
 import pandas as pd
 import os
@@ -11,77 +11,72 @@ from xsugar import Experiment
 from ast import literal_eval
 from xsugar import assertDataDictEqual
 
-class TestExecution(unittest.TestCase):
-    def setUp(self):
-        self.wavelength = np.array([1, 2])
-        self.temperature = np.array([25, 50])
-        self.replicate = np.array([0, 1])
-        self.frequency = 8500
-        self.fake_data = pd.DataFrame(
+@pytest.fixture
+def exp_data(path_data):
+        wavelength = np.array([1, 2])
+        temperature = np.array([25, 50])
+        replicate = np.array([0, 1])
+        frequency = 8500
+        fake_data = pd.DataFrame(
             {'Time (ms)': [0, 0.1, 0.2],
              'Voltage (V)': [1, 2, 3]})
-        def dataFunc(cond):
+        def data_func(cond):
             fake_data = pd.DataFrame(
                 {'Time (ms)': [0, 0.1, 0.2],
                  'Voltage (V)': [1, 2, 3]})
             return fake_data
+        yield dict({
+            'wavelength': wavelength,
+            'temperature': temperature,
+            'replicate': replicate,
+            'frequency': frequency,
+            'fake_data': fake_data,
+            'data_func': data_func,
+        }, **path_data)
 
-        self.exp = Experiment(
-            name='TEST1', kind='test', measure_func=dataFunc,
-             frequency=self.frequency, wavelength=self.wavelength,
-             temperature=self.temperature, replicate=self.replicate)
+@pytest.fixture
+def exp(exp_data):
+    exp = Experiment(
+        name='TEST1', kind='test',
+         measure_func=exp_data['data_func'],
+         frequency=exp_data['frequency'],
+         wavelength=exp_data['wavelength'],
+         temperature=exp_data['temperature'],
+         replicate=exp_data['replicate'])
+    yield exp
+    rmtree(exp_data['data_base_path'], ignore_errors=True)
+    rmtree(exp_data['figures_base_path'], ignore_errors=True)
+    rmtree(exp_data['designs_base_path'], ignore_errors=True)
 
-    @classmethod
-    def setUpClass(cls):
-        cls.base_path = '/Users/jordan.e/Google Drive/GTD/PhD/docs/' +\
-        'pockels_modulator/'
-        cls.data_base_path = cls.base_path + 'data/test/'
-        cls.data_full_path = cls.base_path + 'data/test/TEST1/'
-        cls.figures_base_path = cls.base_path + 'figures/test/'
-        cls.figures_full_path = cls.base_path + 'figures/test/TEST1/'
-        cls.designs_base_path = cls.base_path + 'designs/TEST1/'
+def testExecuteExperimentFilesWritten(exp, exp_data):
+    """
+    Tests that we successfully load a dataset
+    """
+    files = [
+        'TEST1~wavelength-1~temperature-25~replicate-0',
+        'TEST1~wavelength-1~temperature-25~replicate-1',
+        'TEST1~wavelength-1~temperature-50~replicate-0',
+        'TEST1~wavelength-1~temperature-50~replicate-1',
+        'TEST1~wavelength-2~temperature-25~replicate-0',
+        'TEST1~wavelength-2~temperature-25~replicate-1',
+        'TEST1~wavelength-2~temperature-50~replicate-0',
+        'TEST1~wavelength-2~temperature-50~replicate-1']
+    full_filenames = [exp_data['data_full_path'] + fn + '.csv' for fn in files]
+    exp.Execute()
+    files_found = [os.path.isfile(fn) for fn in full_filenames]
+    assert_equal(all(files_found), True)
 
-    def testExecuteExperimentFilesWritten(self):
-        """
-        Tests that we successfully load a dataset
-        """
-        files = [
-            'TEST1~wavelength-1~temperature-25~replicate-0',
-            'TEST1~wavelength-1~temperature-25~replicate-1',
-            'TEST1~wavelength-1~temperature-50~replicate-0',
-            'TEST1~wavelength-1~temperature-50~replicate-1',
-            'TEST1~wavelength-2~temperature-25~replicate-0',
-            'TEST1~wavelength-2~temperature-25~replicate-1',
-            'TEST1~wavelength-2~temperature-50~replicate-0',
-            'TEST1~wavelength-2~temperature-50~replicate-1']
-        full_filenames = [self.data_full_path + fn + '.csv' for fn in files]
-        self.exp.Execute()
-        files_found = [os.path.isfile(fn) for fn in full_filenames]
-        assert_equal(all(files_found), True)
-
-    def testExecuteExperimentDataCorrect(self):
-        self.exp.Execute()
-        desired_data = {
-            'TEST1~wavelength-1~temperature-25~replicate-0': self.fake_data,
-            'TEST1~wavelength-1~temperature-25~replicate-1': self.fake_data,
-            'TEST1~wavelength-1~temperature-50~replicate-0': self.fake_data,
-            'TEST1~wavelength-1~temperature-50~replicate-1': self.fake_data,
-            'TEST1~wavelength-2~temperature-25~replicate-0': self.fake_data,
-            'TEST1~wavelength-2~temperature-25~replicate-1': self.fake_data,
-            'TEST1~wavelength-2~temperature-50~replicate-0': self.fake_data,
-            'TEST1~wavelength-2~temperature-50~replicate-1': self.fake_data}
-        actual_data = self.exp.data
-        assertDataDictEqual(actual_data, desired_data)
-
-    def tearDown(self):
-        """
-        co be run after every test case. Removes directories we created if they
-        exist.
-        """
-        rmtree(self.data_base_path, ignore_errors=True)
-        rmtree(self.figures_base_path, ignore_errors=True)
-        rmtree(self.designs_base_path, ignore_errors=True)
-
-    @classmethod
-    def tearDownClass(self):
-        pass # Tear down to be run after entire script
+def testExecuteExperimentDataCorrect(exp, exp_data):
+    exp.Execute()
+    desired_data = {
+        'TEST1~wavelength-1~temperature-25~replicate-0': exp_data['fake_data'],
+        'TEST1~wavelength-1~temperature-25~replicate-1': exp_data['fake_data'],
+        'TEST1~wavelength-1~temperature-50~replicate-0':exp_data['fake_data'],
+        'TEST1~wavelength-1~temperature-50~replicate-1':exp_data['fake_data'],
+        'TEST1~wavelength-2~temperature-25~replicate-0':exp_data['fake_data'],
+        'TEST1~wavelength-2~temperature-25~replicate-1':exp_data['fake_data'],
+        'TEST1~wavelength-2~temperature-50~replicate-0':exp_data['fake_data'],
+        'TEST1~wavelength-2~temperature-50~replicate-1':exp_data['fake_data'],
+    }
+    actual_data = exp.data
+    assertDataDictEqual(actual_data, desired_data)

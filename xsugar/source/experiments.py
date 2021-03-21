@@ -139,10 +139,12 @@ class Experiment:
 
     def get_conditions(self, data_dict=None, exclude=[]):
         """
-        Get the (unique) conditions from a given set of data
+        Get all the conditions from a given set of data
 
         :param data_dict: The data you wish to extract conditions from
         :param exclude: The list of factors you would like to exclude from consideration.
+        :param include: The complete list of factors you want included
+        :returns conds: A list of conditions that match the inclusion and exclusion criteria
         """
         if not data_dict:
             data_dict = self.data
@@ -197,7 +199,6 @@ class Experiment:
                              for sub in sub_components])
         if name_parsable == False:
             raise ValueError(f'Cannot parse name {name}. Check the name.')
-
 
     def conditionFromName(self, name, full_condition=True):
         """

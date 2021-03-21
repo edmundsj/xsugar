@@ -6,27 +6,6 @@ from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
 from xsugar import Experiment
 
-@pytest.fixture
-def exp():
-    base_path = '/Users/jordan.e/Google Drive/GTD/PhD/docs/' +\
-    'pockels_modulator/'
-    data_base_path = base_path + 'data/test/'
-    data_full_path = base_path + 'data/test/TEST1/'
-    figures_base_path = base_path + 'figures/test/'
-    figures_full_path = base_path + 'figures/test/TEST1/'
-    designs_base_path = base_path + 'designs/TEST1/'
-    wavelength = np.array([1, 2, 3])
-    temperature = np.array([25, 50])
-    frequency = 8500
-    exp = Experiment(name='TEST1', kind='test',
-                     frequency=frequency,
-                     wavelength=wavelength,
-                     temperature=temperature)
-    yield exp
-    rmtree(data_base_path, ignore_errors=True)
-    rmtree(figures_base_path, ignore_errors=True)
-    rmtree(designs_base_path, ignore_errors=True)
-
 def test_get_conditions(exp):
     exp.data = {
         'TEST1~wavelength-1~temperature-25': None,
