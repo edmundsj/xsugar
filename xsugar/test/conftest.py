@@ -18,7 +18,7 @@ def exp(exp_data):
 
 @pytest.fixture
 def path_data():
-    base_path = Path.home()
+    base_path = str(Path.home())
     if 'LOGNAME' in os.environ:
         if os.environ['LOGNAME'] == 'jordan.e':
             base_path = '/Users/jordan.e/Google Drive/GTD/PhD/docs/' +\
