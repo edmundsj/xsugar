@@ -45,10 +45,12 @@ class Experiment:
         else:
             self.data_full_path = self.base_path + 'data/' + kind + '/' + name + '/'
             self.figures_full_path = self.base_path + 'figures/' + kind + '/' + name + '/'
-        self.conditions = {k:v for k, v in kwargs.items() \
+        self.factors = {k:v for k, v in kwargs.items() \
              if isinstance(v, (list, np.ndarray))}
         self.constants = {k:v for k, v in kwargs.items() \
                  if not isinstance(v, (list, np.ndarray))}
+
+        self.conditions = self.generate_conditions(**self.factors)
 
         if not os.path.exists(self.data_full_path):
             os.makedirs(self.data_full_path)
@@ -57,10 +59,9 @@ class Experiment:
 
     def Execute(self, **kwargs):
         if self.verbose == True: print(f"Executing experimnent {self.name}")
-        for cond in self.experimentGenerator():
+        for cond in self.conditions:
             self.executeExperimentCondition(cond, **kwargs)
             if self.verbose == True: print(f"Executing condition {cond}")
-        #self.saveMasterData()
 
     def executeExperimentCondition(self, cond, **kwargs):
         """
@@ -73,23 +74,76 @@ class Experiment:
         self.data[condition_name] = data
         self.saveRawResults(data, cond)
 
-    def experimentGenerator(self):
+    def generate_conditions(self, comb_type='cartesian', **factors):
         """
-        Generator that returns all possible combinations of experiments using
-        the cartesian (outer) product
+        Generates a list of desired conditions from the specified factors and their levels.
+
+        :param factors: dictionary with the factors and their desired levels
+        :param comb_type: "cartesian" (outer product) - generates a full factorial experiment from the set of factors, "individual" creates an individual condition from the specified factor levels, "1to1" generates a 1-to-1 mapping of factor levels.
         """
-        keys = self.conditions.keys()
-        vals = self.conditions.values()
-        for instance in itertools.product(*vals):
-            iterable_dict = dict(zip(keys, instance))
-            full_dict = dict(iterable_dict, **self.constants)
-            yield full_dict
+        if not factors:
+            factors = self.factors
+        cond_list = []
+        keys = factors.keys()
+        vals = factors.values()
+        if comb_type == 'cartesian':
+            for cond in itertools.product(*vals):
+                iterable_cond = dict(zip(keys, cond))
+                full_cond = dict(iterable_cond, **self.constants)
+                cond_list.append(full_cond)
+        elif comb_type == 'individual':
+            cond = factors
+            full_cond = dict(cond, **self.constants)
+            cond_list.append(full_cond)
+        elif comb_type == '1to1' or comb_type == 'onetoone':
+            first_factor_key = list(keys)[0]
+            first_factor_val = list(vals)[0]
+            cond_dict = {}
+            for i in range(len(first_factor_val)):
+                cond_dict[i] = {}
+                for k, v in factors.items():
+                    cond_dict[i][k] = v[i]
+                cond_dict[i] = dict(cond_dict[i], **self.constants)
+            cond_list = list(cond_dict.values())
+
+        return cond_list
+
+    def append_condition(self, **kwargs):
+        """
+        Appends a single condition to the existing list of conditions using the metadata already defined in the experiment initialization. Modifies in-place.
+
+        :param kwargs: Keyword arguments with the values for the condition you want to append
+        """
+        extra_cond = self.generate_conditions(
+                comb_type='individual', **kwargs)
+        self.conditions.extend(extra_cond)
+
+    def insert_condition(
+            self, insertion_location, comb_type='individual', **kwargs):
+        """
+        Inserts a condition (or multiple conditions) at a specified index location in the list. Modifies in-place.
+
+        :param insertion_location: Location of insertion in the conditions list (0 if at the beginning)
+        :param kwargs: Keyword arguments of factors and their levels
+        """
+        extra_conds = self.generate_conditions(
+                comb_type=comb_type, **kwargs)
+        if insertion_location >= len(self.conditions):
+            insertion_location = len(self.conditions) - 1
+        self.conditions[insertion_location:insertion_location] = \
+             extra_conds
 
     def factors_from_condition(self, cond):
         factors = [x for x in cond.keys()]
         return factors
 
     def get_conditions(self, data_dict=None, exclude=[]):
+        """
+        Get the (unique) conditions from a given set of data
+
+        :param data_dict: The data you wish to extract conditions from
+        :param exclude: The list of factors you would like to exclude from consideration.
+        """
         if not data_dict:
             data_dict = self.data
         if isinstance(exclude, str):

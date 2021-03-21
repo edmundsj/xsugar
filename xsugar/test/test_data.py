@@ -52,17 +52,17 @@ class TestData(unittest.TestCase):
         assert_equal(actual_constants , desired_constants)
 
 
-    def testExtractConditions(self):
+    def test_extract_factors(self):
         """
         Tests proper extraction of conditions from arbitrary input keyword
         arguments.
         """
-        actual_conditions = self.exp.conditions
-        desired_conditions = {'wavelengths': self.wavelengths,
+        actual_factors = self.exp.factors
+        desired_factors = {'wavelengths': self.wavelengths,
                              'temperatures': self.temperatures}
-        assert_equal(actual_conditions, desired_conditions)
+        assert_equal(actual_factors, desired_factors)
 
-    def testExperimentGenerator(self):
+    def test_generate_conditions(self):
         """
         Tests that our generator actually generates all the right combinations
         and in the right order.
@@ -75,7 +75,7 @@ class TestData(unittest.TestCase):
             {'wavelengths': 3, 'temperatures': 25, 'frequency': 8500},
             {'wavelengths': 3, 'temperatures': 50, 'frequency': 8500},
         ]
-        for actual_cond, desired_cond in  zip(self.exp.experimentGenerator(),
+        for actual_cond, desired_cond in  zip(self.exp.conditions,
                                               expected_conds):
             assert_equal(actual_cond, desired_cond)
 
