@@ -22,12 +22,12 @@ def path_data():
     if 'LOGNAME' in os.environ:
         if os.environ['LOGNAME'] == 'jordan.e':
             base_path = '/Users/jordan.e/Google Drive/GTD/PhD/docs/' +\
-                'pockels_modulator/'
-    data_base_path = base_path + 'data/test/'
-    data_full_path = base_path + 'data/test/TEST1/'
-    figures_base_path = base_path + 'figures/test/'
-    figures_full_path = base_path + 'figures/test/TEST1/'
-    designs_base_path = base_path + 'designs/TEST1/'
+                'pockels_modulator'
+    data_base_path = base_path + '/data/test/'
+    data_full_path = base_path + '/data/test/TEST1/'
+    figures_base_path = base_path + '/figures/test/'
+    figures_full_path = base_path + '/figures/test/TEST1/'
+    designs_base_path = base_path + '/designs/TEST1/'
     yield {
         'data_base_path': data_base_path,
         'data_full_path': data_full_path,

@@ -15,15 +15,7 @@ from spectralpy import power_spectrum
 from xsugar import assertDataDictEqual
 
 @pytest.fixture
-def exp():
-    base_path = '/Users/jordan.e/Google Drive/GTD/PhD/docs/' +\
-    'pockels_modulator/'
-    data_base_path = base_path + 'data/test/'
-    data_full_path = base_path + 'data/test/TEST1/'
-    figures_base_path = base_path + 'figures/test/'
-    figures_full_path = base_path + 'figures/test/TEST1/'
-    designs_base_path = base_path + 'designs/TEST1/'
-
+def exp(path_data):
     wavelengths = np.array([1, 2, 3])
     temperatures = np.array([25, 50])
     frequency = 8500
@@ -32,9 +24,9 @@ def exp():
                      wavelengths=wavelengths,
                      temperatures=temperatures)
     yield exp
-    rmtree(data_base_path, ignore_errors=True)
-    rmtree(figures_base_path, ignore_errors=True)
-    rmtree(designs_base_path, ignore_errors=True)
+    rmtree(path_data['data_base_path'], ignore_errors=True)
+    rmtree(path_data['figures_base_path'], ignore_errors=True)
+    rmtree(path_data['designs_base_path'], ignore_errors=True)
 
 def test_average_data_scalar(exp):
     fudge_data_1 = 2.0
