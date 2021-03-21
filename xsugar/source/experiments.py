@@ -576,7 +576,7 @@ class Experiment:
                 # This is where we finally get to do iterative
                 legend = []
                 for inner_name, inner_data in data.items():
-                    default_ploter(
+                    plotter(
                         data, fig=fig, ax=ax, theory_func=theory_func,
                         theory_kw=theory_kw, **kwargs)
                     legend.append(inner_name)
