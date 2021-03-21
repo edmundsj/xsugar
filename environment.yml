@@ -5,12 +5,12 @@ channels:
   - defaults
 dependencies:
   - coverage
-  - coveralls
   - matplotlib
   - numpy
   - pandas
   - pip
   - pip:
+    - sphinxcontrib-bibtex
     - sugarplot
     - spectralpy
     - sciparse

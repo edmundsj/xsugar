@@ -26,7 +26,9 @@ class Experiment:
                  ident='', verbose=False,
                  base_path=None, **kwargs):
         if not base_path:
-            base_path = str(Path.home()) + '/Google Drive/GTD/PhD/docs/pockels_modulator/'
+            base_path = str(Path.home())
+        if os.environ['LOGNAME'] == 'jordan.e'
+            base_path += '/Google Drive/GTD/PhD/docs/pockels_modulator/'
         self.major_separator = '~'
         self.minor_separator = '-'
         self.name = name
@@ -38,7 +40,6 @@ class Experiment:
         self.measure_func = measure_func
 
         if kind == 'designs' or kind == 'design':
-            base_path = '/Users/jordan.e/Google Drive/GTD/PhD/docs/pockels_modulator/'
             self.data_full_path = base_path + 'designs/'+ name + '/data/'
             self.figures_full_path = base_path + 'designs/' + name + '/figures/'
         else:
