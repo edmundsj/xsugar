@@ -1,5 +1,5 @@
-# expx - Experimental Scripting Extras
-[![Build](https://github.com/edmundsj/template/actions/workflows/python-package-conda.yml/badge.svg)](https://github.com/edmundsj/template/actions/workflows/python-package-conda.yml)
+# xsugar  Experimental Scripting Framework
+[![Build](https://github.com/edmundsj/xsugar/actions/workflows/python-package-conda.yml/badge.svg)](https://github.com/edmundsj/xsugar/actions/workflows/python-package-conda.yml) [![docs](https://github.com/edmundsj/xsugar/actions/workflows/build-docs.yml/badge.svg)](https://github.com/edmundsj/xsugar/actions/workflows/build-docs.yml) [![codecov](https://codecov.io/gh/edmundsj/xsugar/branch/main/graph/badge.svg?token=yDhjXn4fZh)](https://codecov.io/gh/edmundsj/xsugar)
 
 Often in my Ph.D. I found myself doing the same thing over and over again: writing a script to execute an experiment, and writing a script to parse, analyze, and plot the data. These scripts would always be saving data and figures to roughly the same place, and the general process carried out was the same. I came to realize if the data is numerical and tabular, and the experimental design relies on a finite number of conditions, much of this process can (and should) be automated. This package is my attempt to do that.
 
