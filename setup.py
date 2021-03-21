@@ -5,7 +5,7 @@ import glob
 example_data = glob.glob('xsugar/examples/*')
 source_data = glob.glob('xsugar/source/*')
 test_data = glob.glob('xsugar/test/*')
-test_data_data.glob.glob('xsugar/test/data/data/test/TEST1/*')
+test_data_data = glob.glob('xsugar/test/data/data/test/TEST1/*')
 total_data = example_data + source_data + test_data + test_data_data
 package_data = [x.replace('xsugar/', '') for x in total_data]
 
