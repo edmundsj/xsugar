@@ -27,8 +27,9 @@ class Experiment:
                  base_path=None, **kwargs):
         if not base_path:
             base_path = str(Path.home())
-        if os.environ['LOGNAME'] == 'jordan.e':
-            base_path += '/Google Drive/GTD/PhD/docs/pockels_modulator/'
+        if 'LOGNAME' in os.environ:
+            if os.environ['LOGNAME'] == 'jordan.e':
+                base_path += '/Google Drive/GTD/PhD/docs/pockels_modulator/'
         self.major_separator = '~'
         self.minor_separator = '-'
         self.name = name

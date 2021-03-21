@@ -2,6 +2,8 @@ import pytest
 import numpy as np
 from shutil import rmtree
 from xsugar import Experiment
+from pathlib import Path
+import os
 
 @pytest.fixture
 def exp(exp_data):
@@ -16,8 +18,11 @@ def exp(exp_data):
 
 @pytest.fixture
 def path_data():
-    base_path = '/Users/jordan.e/Google Drive/GTD/PhD/docs/' +\
-    'pockels_modulator/'
+    base_path = Path.home()
+    if 'LOGNAME' in os.environ:
+        if os.environ['LOGNAME'] == 'jordan.e':
+            base_path = '/Users/jordan.e/Google Drive/GTD/PhD/docs/' +\
+                'pockels_modulator/'
     data_base_path = base_path + 'data/test/'
     data_full_path = base_path + 'data/test/TEST1/'
     figures_base_path = base_path + 'figures/test/'
