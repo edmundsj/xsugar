@@ -10,7 +10,7 @@ from numpy.testing import assert_equal, assert_allclose
 from xsugar import Experiment
 from ast import literal_eval
 
-def testSavePSDFigureFilename(exp, path_data):
+def testSavePSDFigureFilename(exp, path_data, convert_name):
     """
     Tests that we successfully created and saved a single PSD figure when
     our dataset is just a single item.
@@ -18,14 +18,14 @@ def testSavePSDFigureFilename(exp, path_data):
     raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
                              'Current (mV)': [4,4.5,6]})
     cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name = 'TEST1~wavelengths-1~temperatures-25'
+    condition_name = convert_name('TEST1~wavelengths-1~temperatures-25')
     filename_desired = condition_name + '~PSD.png'
     exp.data = {condition_name: raw_data}
     exp.plotPSD(average_along=None)
     file_found = os.path.isfile(path_data['figures_full_path'] + filename_desired)
     assert_equal(file_found, True)
 
-def testSavePSDFigureMultipleFilename(exp, path_data):
+def testSavePSDFigureMultipleFilename(exp, path_data, convert_name):
     """
     Tests that we successfully created and saved a single PSD figure when
     our dataset is just a single item.
@@ -33,8 +33,8 @@ def testSavePSDFigureMultipleFilename(exp, path_data):
     raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
                              'Current (mV)': [4,4.5,6]})
     cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name_1 = 'TEST1~wavelengths-1~temperatures-25~replicate-0'
-    condition_name_2 = 'TEST1~wavelengths-1~temperatures-25~replicate-1'
+    condition_name_1 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-0')
+    condition_name_2 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-1')
     filename_desired_1 = condition_name_1 + '~PSD.png'
     filename_desired_2 = condition_name_2 + '~PSD.png'
     exp.data = {condition_name_1: raw_data, condition_name_2: raw_data}
@@ -46,7 +46,7 @@ def testSavePSDFigureMultipleFilename(exp, path_data):
     assert_equal(file1_found, True)
     assert_equal(file2_found, True)
 
-def testSavePSDFigureAverageFilename(exp, path_data):
+def testSavePSDFigureAverageFilename(exp, path_data, convert_name):
     """
     Tests that we successfully created and saved a single PSD figure when
     we want to create an averaged PSD plot
@@ -56,9 +56,9 @@ def testSavePSDFigureAverageFilename(exp, path_data):
     raw_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                              'Current (mV)': [8,4.5,8]})
     cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name_1 = 'TEST1~wavelengths-1~temperatures-25~replicate-1'
-    condition_name_2 = 'TEST1~wavelengths-1~temperatures-25~replicate-2'
-    filename_desired = 'TEST1~wavelengths-1~temperatures-25~PSD~averaged.png'
+    condition_name_1 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-1')
+    condition_name_2 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-2')
+    filename_desired = convert_name('TEST1~wavelengths-1~temperatures-25~PSD~averaged.png')
 
     exp.data = {condition_name_1: raw_data,
                  condition_name_2: raw_data_2}
@@ -66,7 +66,7 @@ def testSavePSDFigureAverageFilename(exp, path_data):
     file_found = os.path.isfile(path_data['figures_full_path'] + filename_desired)
     assert_equal(file_found, True)
 
-def testGenerateTimeDomainPlot(exp, path_data):
+def testGenerateTimeDomainPlot(exp, path_data, convert_name):
     """
     Tests that we successfully create a simple figure from a single pandas
     array.
@@ -74,14 +74,14 @@ def testGenerateTimeDomainPlot(exp, path_data):
     raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
                              'Current (mV)': [4,4.5,6]})
     cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name = 'TEST1~wavelengths-1~temperatures-25_replicate-1'
+    condition_name = convert_name('TEST1~wavelengths-1~temperatures-25_replicate-1')
     filename_desired = condition_name + '.png'
     exp.data = {condition_name: raw_data}
     exp.plot()
     file_found = os.path.isfile(path_data['figures_full_path'] + filename_desired)
     assert_equal(file_found, True)
 
-def testGenerateRepresentativePlot(exp, path_data):
+def testGenerateRepresentativePlot(exp, path_data, convert_name):
     """
     Tests that we successfully create a single figure from a whole set of
     replicate data, instead of a bunch of figures
@@ -92,10 +92,10 @@ def testGenerateRepresentativePlot(exp, path_data):
               'replicate': 1}
     cond_2 = {'wavelength': 1, 'temperature': 25, 'frequency': 8500,
               'replicate': 2}
-    condition_name_1 = 'TEST1~wavelengths-1~temperatures-25~replicate-1'
-    condition_name_2 = 'TEST1~wavelengths-1~temperatures-25~replicate-2'
+    condition_name_1 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-1')
+    condition_name_2 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-2')
 
-    filename_desired = 'TEST1~wavelengths-1~temperatures-25~representative'
+    filename_desired = convert_name('TEST1~wavelengths-1~temperatures-25~representative')
     exp.data = {condition_name_1: raw_data,
                  condition_name_2 : raw_data}
     exp.plot(representative='replicate')

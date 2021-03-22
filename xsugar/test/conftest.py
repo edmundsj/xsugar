@@ -5,16 +5,6 @@ from xsugar import Experiment
 from pathlib import Path
 import os
 
-@pytest.fixture
-def exp(exp_data):
-    exp = Experiment(name='TEST1', kind='test',
-                     frequency=exp_data['frequency'],
-                     wavelength=exp_data['wavelength'],
-                     temperature=exp_data['temperature'])
-    yield exp
-    rmtree(exp_data['data_base_path'], ignore_errors=True)
-    rmtree(exp_data['figures_base_path'], ignore_errors=True)
-    rmtree(exp_data['designs_base_path'], ignore_errors=True)
 
 @pytest.fixture
 def path_data():
@@ -41,8 +31,32 @@ def exp_data(path_data):
     wavelength = np.array([1, 2, 3])
     temperature = np.array([25, 50])
     frequency = 8500
+    major_separator = '~'
+    minor_separator = '='
     yield dict({
         'wavelength': wavelength,
         'temperature': temperature,
         'frequency': frequency,
+        'major_separator': major_separator,
+        'minor_separator': minor_separator,
     }, **path_data)
+
+@pytest.fixture
+def convert_name(exp_data):
+    js, ns = exp_data['major_separator'], exp_data['minor_separator']
+    def real_convert(name):
+        name = name.replace('-', ns)
+        name = name.replace('~', js)
+        return name
+    return real_convert
+
+@pytest.fixture
+def exp(exp_data):
+    exp = Experiment(name='TEST1', kind='test',
+                     frequency=exp_data['frequency'],
+                     wavelength=exp_data['wavelength'],
+                     temperature=exp_data['temperature'])
+    yield exp
+    rmtree(exp_data['data_base_path'], ignore_errors=True)
+    rmtree(exp_data['figures_base_path'], ignore_errors=True)
+    rmtree(exp_data['designs_base_path'], ignore_errors=True)

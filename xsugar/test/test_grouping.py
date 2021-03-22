@@ -8,7 +8,7 @@ from itertools import zip_longest
 from shutil import rmtree
 
 @pytest.fixture
-def exp(path_data):
+def exp(path_data, convert_name):
     wavelengths = np.array([1, 2, 3])
     temperatures = np.array([25, 50])
     frequency = 8500
@@ -22,8 +22,8 @@ def exp(path_data):
     condition_2 = {'frequency': frequency,
                    'wavelength': 1,
                    'replicate': 1}
-    name_1 = 'TEST1~wavelength-1~replicate-0'
-    name_2 = 'TEST1~wavelength-1~replicate-1'
+    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
+    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
     data_dict = {
         name_1: fudge_data_1,
         name_2: fudge_data_2}
@@ -53,11 +53,11 @@ def testGenerateGroupsNone(exp):
         data_dict=exp['data_dict'], group_along=None)
     assertDataDictEqual(actual_groups, desired_groups)
 
-def testGenerateGroups(exp):
+def testGenerateGroups(exp, convert_name):
 
-    desired_groups = {'TEST1~wavelength-1': {
-        'TEST1~wavelength-1~replicate-0': None,
-        'TEST1~wavelength-1~replicate-1': None,
+    desired_groups = {convert_name('TEST1~wavelength-1'): {
+        convert_name('TEST1~wavelength-1~replicate-0'): None,
+        convert_name('TEST1~wavelength-1~replicate-1'): None,
     }}
 
     actual_groups = exp['exp'].generate_groups(
@@ -74,12 +74,12 @@ def testGenerateGroupsWrongGroup(exp):
         exp['exp'].generate_groups(
                 data_dict=exp['data_dict'], group_along='wrong_name')
 
-def test_generate_groups_value(exp):
+def test_generate_groups_value(exp, convert_name):
     desired_groups = {
-        'TEST1~replicate-0': {
-             'TEST1~wavelength-1~replicate-0': None},
-        'TEST1~replicate-1': {
-            'TEST1~wavelength-1~replicate-1': None}}
+        convert_name('TEST1~replicate-0'): {
+             convert_name('TEST1~wavelength-1~replicate-0'): None},
+        convert_name('TEST1~replicate-1'): {
+            convert_name('TEST1~wavelength-1~replicate-1'): None}}
     actual_groups = exp['exp'].generate_groups(
             data_dict=exp['data_dict'], group_along='replicate', grouping_type='value')
     assertDataDictEqual(actual_groups, desired_groups)
@@ -93,40 +93,40 @@ def test_group_data_none(exp):
         data_dict=exp['data_dict'], group_along=None)
     assertDataDictEqual(actual_data, desired_data)
 
-def test_group_scalar_data(exp):
+def test_group_scalar_data(exp, convert_name):
     """
     Tests whether we can compress the derived quantity as a bunch of
     scalar-only dicts into a bunch of plottable and usaable pandas array.
     """
-    scalar_data = {'TEST1~wavelength-1~temperature-25': 1,
-                   'TEST1~wavelength-1~temperature-35': 2}
+    scalar_data = {convert_name('TEST1~wavelength-1~temperature-25'): 1,
+                   convert_name('TEST1~wavelength-1~temperature-35'): 2}
 
-    desired_data = {'TEST1~wavelength-1': {
-        'TEST1~wavelength-1~temperature-25': 1,
-        'TEST1~wavelength-1~temperature-35': 2,}}
+    desired_data = {convert_name('TEST1~wavelength-1'): {
+        convert_name('TEST1~wavelength-1~temperature-25'): 1,
+        convert_name('TEST1~wavelength-1~temperature-35'): 2,}}
 
     actual_data = exp['exp'].group_data(
         data_dict=scalar_data, group_along='temperature')
 
     assertDataDictEqual(actual_data, desired_data)
 
-def test_group_by_name(exp):
+def test_group_by_name(exp, convert_name):
 
     actual_data = exp['exp'].group_data(
         data_dict=exp['data_dict'], group_along='replicate', grouping_type='name')
     desired_data = {
-        'TEST1~wavelength-1': {
-            'TEST1~wavelength-1~replicate-0': exp['fudge_data_1'],
-            'TEST1~wavelength-1~replicate-1': exp['fudge_data_2']}}
+        convert_name('TEST1~wavelength-1'): {
+            convert_name('TEST1~wavelength-1~replicate-0'): exp['fudge_data_1'],
+            convert_name('TEST1~wavelength-1~replicate-1'): exp['fudge_data_2']}}
 
     # Assert all values inside the pandas array are identical
     assertDataDictEqual(actual_data, desired_data)
 
-def test_group_by_value(exp):
+def test_group_by_value(exp, convert_name):
     actual_data = exp['exp'].group_data(
             data_dict=exp['data_dict'], group_along='wavelength', grouping_type='value')
     desired_data = {
-        'TEST1~wavelength-1': {
-            'TEST1~wavelength-1~replicate-0': exp['fudge_data_1'],
-            'TEST1~wavelength-1~replicate-1': exp['fudge_data_2'],}}
+        convert_name('TEST1~wavelength-1'): {
+            convert_name('TEST1~wavelength-1~replicate-0'): exp['fudge_data_1'],
+            convert_name('TEST1~wavelength-1~replicate-1'): exp['fudge_data_2'],}}
     assertDataDictEqual(actual_data, desired_data)

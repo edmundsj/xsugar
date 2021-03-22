@@ -32,6 +32,8 @@ def exp_data(path_data):
             'frequency': frequency,
             'fake_data': fake_data,
             'data_func': data_func,
+            'major_separator': '~',
+            'minor_separator': '=',
         }, **path_data)
 
 @pytest.fixture
@@ -48,35 +50,35 @@ def exp(exp_data):
     rmtree(exp_data['figures_base_path'], ignore_errors=True)
     rmtree(exp_data['designs_base_path'], ignore_errors=True)
 
-def testExecuteExperimentFilesWritten(exp, exp_data):
+def testExecuteExperimentFilesWritten(exp, exp_data, convert_name):
     """
     Tests that we successfully load a dataset
     """
     files = [
-        'TEST1~wavelength-1~temperature-25~replicate-0',
-        'TEST1~wavelength-1~temperature-25~replicate-1',
-        'TEST1~wavelength-1~temperature-50~replicate-0',
-        'TEST1~wavelength-1~temperature-50~replicate-1',
-        'TEST1~wavelength-2~temperature-25~replicate-0',
-        'TEST1~wavelength-2~temperature-25~replicate-1',
-        'TEST1~wavelength-2~temperature-50~replicate-0',
-        'TEST1~wavelength-2~temperature-50~replicate-1']
+        convert_name('TEST1~wavelength-1~temperature-25~replicate-0'),
+        convert_name('TEST1~wavelength-1~temperature-25~replicate-1'),
+        convert_name('TEST1~wavelength-1~temperature-50~replicate-0'),
+        convert_name('TEST1~wavelength-1~temperature-50~replicate-1'),
+        convert_name('TEST1~wavelength-2~temperature-25~replicate-0'),
+        convert_name('TEST1~wavelength-2~temperature-25~replicate-1'),
+        convert_name('TEST1~wavelength-2~temperature-50~replicate-0'),
+        convert_name('TEST1~wavelength-2~temperature-50~replicate-1')]
     full_filenames = [exp_data['data_full_path'] + fn + '.csv' for fn in files]
     exp.Execute()
     files_found = [os.path.isfile(fn) for fn in full_filenames]
     assert_equal(all(files_found), True)
 
-def testExecuteExperimentDataCorrect(exp, exp_data):
+def testExecuteExperimentDataCorrect(exp, exp_data, convert_name):
     exp.Execute()
     desired_data = {
-        'TEST1~wavelength-1~temperature-25~replicate-0': exp_data['fake_data'],
-        'TEST1~wavelength-1~temperature-25~replicate-1': exp_data['fake_data'],
-        'TEST1~wavelength-1~temperature-50~replicate-0':exp_data['fake_data'],
-        'TEST1~wavelength-1~temperature-50~replicate-1':exp_data['fake_data'],
-        'TEST1~wavelength-2~temperature-25~replicate-0':exp_data['fake_data'],
-        'TEST1~wavelength-2~temperature-25~replicate-1':exp_data['fake_data'],
-        'TEST1~wavelength-2~temperature-50~replicate-0':exp_data['fake_data'],
-        'TEST1~wavelength-2~temperature-50~replicate-1':exp_data['fake_data'],
+        convert_name('TEST1~wavelength-1~temperature-25~replicate-0'): exp_data['fake_data'],
+        convert_name('TEST1~wavelength-1~temperature-25~replicate-1'): exp_data['fake_data'],
+        convert_name('TEST1~wavelength-1~temperature-50~replicate-0'):exp_data['fake_data'],
+        convert_name('TEST1~wavelength-1~temperature-50~replicate-1'):exp_data['fake_data'],
+        convert_name('TEST1~wavelength-2~temperature-25~replicate-0'):exp_data['fake_data'],
+        convert_name('TEST1~wavelength-2~temperature-25~replicate-1'):exp_data['fake_data'],
+        convert_name('TEST1~wavelength-2~temperature-50~replicate-0'):exp_data['fake_data'],
+        convert_name('TEST1~wavelength-2~temperature-50~replicate-1'):exp_data['fake_data'],
     }
     actual_data = exp.data
     assertDataDictEqual(actual_data, desired_data)

@@ -31,7 +31,7 @@ class Experiment:
                 if os.environ['LOGNAME'] == 'jordan.e':
                     base_path += '/Google Drive/GTD/PhD/docs/pockels_modulator'
         self.major_separator = '~'
-        self.minor_separator = '-'
+        self.minor_separator = '='
         self.name = name
         self.ident = ident
         self.base_path = base_path
@@ -104,6 +104,8 @@ class Experiment:
                 for v in cond_partial.values():
                     fh.write(str(v) + ',')
                 fh.write(str(raw_data) + '\n')
+        else:
+            raise ValueError(f'Cannot save data type {type(raw_data)}. Can only currently handle types of float, int, and pd.DataFrame')
 
     def generate_conditions(self, comb_type='cartesian', **factors):
         """

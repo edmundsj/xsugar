@@ -6,14 +6,14 @@ from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
 from xsugar import Experiment
 
-def test_get_conditions(exp):
+def test_get_conditions(exp, convert_name):
     exp.data = {
-        'TEST1~wavelength-1~temperature-25': None,
-        'TEST1~wavelength-2~temperature-25': None,
-        'TEST1~wavelength-3~temperature-25': None,
-        'TEST1~wavelength-1~temperature-35': None,
-        'TEST1~wavelength-2~temperature-35': None,
-        'TEST1~wavelength-3~temperature-35': None,}
+        convert_name('TEST1~wavelength-1~temperature-25'): None,
+        convert_name('TEST1~wavelength-2~temperature-25'): None,
+        convert_name('TEST1~wavelength-3~temperature-25'): None,
+        convert_name('TEST1~wavelength-1~temperature-35'): None,
+        convert_name('TEST1~wavelength-2~temperature-35'): None,
+        convert_name('TEST1~wavelength-3~temperature-35'): None,}
     desired_conditions = [
         {'wavelength': 1, 'temperature': 25},
         {'wavelength': 2, 'temperature': 25},
@@ -25,14 +25,14 @@ def test_get_conditions(exp):
     actual_conditions = exp.get_conditions()
     assert_equal(actual_conditions, desired_conditions)
 
-def test_get_conditions_exclude(exp):
+def test_get_conditions_exclude(exp, convert_name):
     exp.data = {
-        'TEST1~wavelength-1~temperature-25': None,
-        'TEST1~wavelength-2~temperature-25': None,
-        'TEST1~wavelength-3~temperature-25': None,
-        'TEST1~wavelength-1~temperature-35': None,
-        'TEST1~wavelength-2~temperature-35': None,
-        'TEST1~wavelength-3~temperature-35': None,}
+        convert_name('TEST1~wavelength-1~temperature-25'): None,
+        convert_name('TEST1~wavelength-2~temperature-25'): None,
+        convert_name('TEST1~wavelength-3~temperature-25'): None,
+        convert_name('TEST1~wavelength-1~temperature-35'): None,
+        convert_name('TEST1~wavelength-2~temperature-35'): None,
+        convert_name('TEST1~wavelength-3~temperature-35'): None,}
     desired_conditions = [
         {'wavelength': 1},
         {'wavelength': 2},
@@ -41,15 +41,15 @@ def test_get_conditions_exclude(exp):
     actual_conditions = exp.get_conditions(exclude='temperature')
     assert_equal(actual_conditions, desired_conditions)
 
-def test_get_conditions_exclude_uneven(exp):
+def test_get_conditions_exclude_uneven(exp, convert_name):
     exp.data = {
-        'TEST1~wavelength-1~temperature-25': None,
-        'TEST1~wavelength-2~temperature-25': None,
-        'TEST1~wavelength-3~temperature-25': None,
-        'TEST1~wavelength-1~temperature-35': None,
-        'TEST1~wavelength-2~temperature-35': None,
-        'TEST1~wavelength-3~temperature-35': None,
-        'TEST1~wavelength-4~temperature-35': None,}
+        convert_name('TEST1~wavelength-1~temperature-25'): None,
+        convert_name('TEST1~wavelength-2~temperature-25'): None,
+        convert_name('TEST1~wavelength-3~temperature-25'): None,
+        convert_name('TEST1~wavelength-1~temperature-35'): None,
+        convert_name('TEST1~wavelength-2~temperature-35'): None,
+        convert_name('TEST1~wavelength-3~temperature-35'): None,
+        convert_name('TEST1~wavelength-4~temperature-35'): None,}
     desired_conditions = [
         {'wavelength': 1},
         {'wavelength': 2},

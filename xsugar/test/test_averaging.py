@@ -28,7 +28,7 @@ def exp(path_data):
     rmtree(path_data['figures_base_path'], ignore_errors=True)
     rmtree(path_data['designs_base_path'], ignore_errors=True)
 
-def test_average_data_scalar(exp):
+def test_average_data_scalar(exp, convert_name):
     fudge_data_1 = 2.0
     fudge_data_2 = 3.0
     averaged_data = 2.5
@@ -38,16 +38,16 @@ def test_average_data_scalar(exp):
     condition_2 = {'frequency': 8500,
                    'wavelength': 1,
                    'replicate': 1}
-    name_1 = 'TEST1~wavelength-1~replicate-0'
-    name_2 = 'TEST1~wavelength-1~replicate-1'
+    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
+    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
     data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
-    group_name = 'TEST1~wavelength-1'
+    group_name = convert_name('TEST1~wavelength-1')
 
     averaged_data_desired = {group_name: averaged_data}
     averaged_data_actual = exp.average_data(data_dict, average_along='replicate')
     assertDataDictEqual(averaged_data_actual, averaged_data_desired)
 
-def test_average_data_pandas(exp):
+def test_average_data_pandas(exp, convert_name):
     fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [0.5, 0.6, 0.7]})
     fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
@@ -60,9 +60,9 @@ def test_average_data_pandas(exp):
     condition_2 = {'frequency': 8500,
                    'wavelength': 1,
                    'replicate': 1}
-    name_1 = 'TEST1~wavelength-1~replicate-0'
-    name_2 = 'TEST1~wavelength-1~replicate-1'
-    group_name = 'TEST1~wavelength-1'
+    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
+    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
+    group_name = convert_name('TEST1~wavelength-1')
     data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
 
     averaged_data_desired = {group_name: averaged_data}
@@ -73,7 +73,7 @@ def test_average_data_pandas(exp):
     assertDataDictEqual(averaged_data_actual_first, averaged_data_desired)
     assertDataDictEqual(averaged_data_actual_last, averaged_data_desired)
 
-def testExtractDerivedQuantityMean(exp):
+def testExtractDerivedQuantityMean(exp, convert_name):
     """
     Attempst to extract the mean from a set of data
     """
@@ -83,8 +83,8 @@ def testExtractDerivedQuantityMean(exp):
                                'Photocurrent (nA)': [1, 1.2, 1.4]})
     mean_data_1 = 0.6
     mean_data_2 = 1.2
-    name_1 = 'TEST1~wavelength-1~replicate-0'
-    name_2 = 'TEST1~wavelength-1~replicate-1'
+    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
+    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
     desired_quantities = {name_1: mean_data_1, name_2: mean_data_2}
     data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
 
@@ -97,7 +97,7 @@ def testExtractDerivedQuantityMean(exp):
 
     assertDataDictEqual(actual_quantities, desired_quantities)
 
-def testExtractDerivedQuantityPSD(exp):
+def testExtractDerivedQuantityPSD(exp, convert_name):
     """
     Attempts to extract the PSD from a set of data
     """
@@ -105,8 +105,8 @@ def testExtractDerivedQuantityPSD(exp):
                                'Photocurrent (nA)': [0.5, 0.6, 0.7]})
     fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [1, 1.2, 1.4]})
-    name_1 = 'TEST1~wavelength-1~replicate-0'
-    name_2 = 'TEST1~wavelength-1~replicate-1'
+    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
+    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
     data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
 
     def powerSpectrum(data, cond):
@@ -117,13 +117,13 @@ def testExtractDerivedQuantityPSD(exp):
                         name_2: power_spectrum(fudge_data_2)}
     assertDataDictEqual(actual_psd_data, desired_psd_data)
 
-def testExtractDerivedQuantityPSDAverage(exp):
+def testExtractDerivedQuantityPSDAverage(exp, convert_name):
     fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [0.5, 0.6, 0.7]})
     fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [1, 1.2, 1.4]})
-    name_1 = 'TEST1~wavelength-1~replicate-0'
-    name_2 = 'TEST1~wavelength-1~replicate-1'
+    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
+    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
     data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
     data_psd_1 = power_spectrum(fudge_data_1)
     data_psd_2 = power_spectrum(fudge_data_2)
@@ -134,7 +134,7 @@ def testExtractDerivedQuantityPSDAverage(exp):
         return power_spectrum(data)
 
     desired_psd = data_psd_1
-    desired_data_dict = {'TEST1~wavelength-1': desired_psd}
+    desired_data_dict = {convert_name('TEST1~wavelength-1'): desired_psd}
     actual_data_dict = exp.derived_quantity(
         data_dict=data_dict, quantity_func=powerSpectrum,
         average_along='replicate')

@@ -13,7 +13,6 @@ from ast import literal_eval
 from itertools import zip_longest
 from pathlib import Path
 
-
 def testExtractConstants(exp, exp_data):
     """
     Tests that our experiment properly extracts metadata from a list of
@@ -28,11 +27,13 @@ def test_save_raw_results_filename(exp, exp_data):
     Tests that we save the raw results in the proper directory and with
     the proper metadata and with the proper name.
     """
-    raw_data = pd.DataFrame({'wavelengths': [1, 2, 3],
+    js, ns = exp_data['major_separator'], exp_data['minor_separator']
+    raw_data = pd.DataFrame({'wavelength': [1, 2, 3],
                              'Current': [4,4.5,6]})
-    cond = {'wavelengths': 1, 'temperatures': 25, 'frequency': 8500}
+    cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
     exp.saveRawResults(raw_data, cond)
-    filename_desired = 'TEST1~wavelengths-1~temperatures-25.csv'
+    filename_desired = 'TEST1' + js + 'wavelength' + ns + '1' + js + \
+                       'temperature' + ns + '25.csv'
     file_found = os.path.isfile(exp_data['data_full_path'] + filename_desired)
     assert_equal(file_found, True)
 
@@ -41,12 +42,14 @@ def test_save_raw_results_metadata(exp, exp_data):
     Tests that we save the raw results in the proper directory and with
     the proper metadata and with the proper name.
     """
-    raw_data = pd.DataFrame({'wavelengths': [1, 2, 3],
+    js, ns = exp_data['major_separator'], exp_data['minor_separator']
+    raw_data = pd.DataFrame({'wavelength': [1, 2, 3],
                              'Current': [4,4.5,6]})
-    cond = {'wavelengths': 1, 'temperatures': 25, 'frequency':
+    cond = {'wavelength': 1, 'temperature': 25, 'frequency':
             exp_data['frequency']}
     exp.saveRawResults(raw_data, cond)
-    filename_desired = 'TEST1~wavelengths-1~temperatures-25.csv'
+    filename_desired = 'TEST1' + js + 'wavelength' + ns + '1' + js + \
+                       'temperature' + ns + '25.csv'
     with open(exp_data['data_full_path'] + filename_desired) as fh:
         first_line = fh.readline()
         metadata_actual = literal_eval(first_line)
@@ -58,12 +61,13 @@ def test_save_raw_results_data(exp, exp_data):
     """
     Tests that we correctly save the raw data and can read it out again.
     """
-    data_desired = pd.DataFrame({'wavelengths': [1, 2, 3],
+    js, ns = exp_data['major_separator'], exp_data['minor_separator']
+    data_desired = pd.DataFrame({'wavelength': [1, 2, 3],
                              'Current': [4,4.5,6]})
-    cond = {'wavelengths': 1, 'temperatures': 25, 'frequency':
+    cond = {'wavelength': 1, 'temperature': 25, 'frequency':
             exp_data['frequency']}
     exp.saveRawResults(data_desired, cond)
-    filename_desired = 'TEST1~wavelengths-1~temperatures-25.csv'
+    filename_desired = 'TEST1' + js + 'wavelength' + ns + '1' + js + 'temperature' + ns + '25.csv'
     with open(exp_data['data_full_path'] + filename_desired) as fh:
         first_line = fh.readline()
         data_actual = pd.read_csv(fh)
@@ -104,9 +108,9 @@ def test_save_raw_scalar_multiple(exp, exp_data):
 
 @pytest.mark.skip
 def testSaveDerivedQuantitiesFilename(exp, exp_data):
-    master_data = {'TEST1': pd.DataFrame({'wavelengths': [1, 2, 3],
+    master_data = {'TEST1': pd.DataFrame({'wavelength': [1, 2, 3],
                              'Mean': [1,2,4]})}
-    cond = {'wavelengths': 1, 'temperatures': 25, 'frequency': 8500}
+    cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
     exp.master_data = master_data
     exp.saveDerivedQuantities()
     filename_desired = 'TEST1.csv'
@@ -115,7 +119,7 @@ def testSaveDerivedQuantitiesFilename(exp, exp_data):
 
 @pytest.mark.skip
 def testSaveDerivedQuantitiesData(exp, exp_data):
-    data_desired = pd.DataFrame({'wavelengths': [1, 2, 3],
+    data_desired = pd.DataFrame({'wavelength': [1, 2, 3],
                              'Mean': [1,2,4]})
     exp.master_data = data_desired
     exp.saveDerivedQuantities()
@@ -128,7 +132,7 @@ def testSaveDerivedQuantitiesData(exp, exp_data):
 
 @pytest.mark.skip
 def testSaveDerivedQuantitiesMetadata(exp, exp_data):
-    data_desired = pd.DataFrame({'wavelengths': [1, 2, 3],
+    data_desired = pd.DataFrame({'wavelength': [1, 2, 3],
                              'Mean': [1,2,4]})
     metadata_desired = {'frequency': exp_data['frequency']}
     exp.master_data = data_desired
