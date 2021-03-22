@@ -75,6 +75,36 @@ class Experiment:
         self.data[condition_name] = data
         self.saveRawResults(data, cond)
 
+    def saveRawResults(self, raw_data, cond):
+        """
+        Saves raw results from the experiment performed with a given condition. If the data is a scalar, saves the results in a single pandas array. If the data is itself a numpy/pandas array, saves the data in its own file for later analysis.
+
+        :param cond: Experimental condition as a dictionary
+        :param raw_data: Raw data as a pandas array to save
+        """
+        partial_filename = self.nameFromCondition(cond)
+        self.data[partial_filename] = raw_data
+        if isinstance(raw_data, pd.DataFrame):
+            full_filename = self.data_full_path + partial_filename + '.csv'
+            with open(full_filename, 'w+') as fh:
+                fh.write(str(self.constants) + '\n')
+                raw_data.to_csv(fh, mode='a', index=False)
+
+        elif isinstance(raw_data, (float, int)):
+            full_filename = self.data_full_path + self.name + '.csv'
+            cond_partial = self.conditionFromName(partial_filename,
+                    full_condition=False)
+            if not os.path.isfile(full_filename):
+                with open(full_filename, 'w+') as fh:
+                    fh.write(str(self.constants) + '\n')
+                    for k in cond_partial.keys():
+                        fh.write(str(k) + ',')
+                    fh.write('Value\n')
+            with open(full_filename, 'a') as fh:
+                for v in cond_partial.values():
+                    fh.write(str(v) + ',')
+                fh.write(str(raw_data) + '\n')
+
     def generate_conditions(self, comb_type='cartesian', **factors):
         """
         Generates a list of desired conditions from the specified factors and their levels.
@@ -227,20 +257,6 @@ class Experiment:
             if name in self.metadata.keys():
                 cond.update(self.metadata[name])
         return cond
-
-    def saveRawResults(self, raw_data, condition):
-        """
-        Saves raw results from the experiment performed with a given condition
-
-        :param condition: Experimental condition as a dictionary
-        :param raw_data: Raw data as a pandas array to save
-        """
-        partial_filename = self.nameFromCondition(condition)
-        self.data[partial_filename] = raw_data
-        full_filename = self.data_full_path + partial_filename + '.csv'
-        with open(full_filename, 'w+') as fh:
-            fh.write(str(self.constants) + '\n')
-            raw_data.to_csv(fh, mode='a', index=False)
 
     def derived_quantity(self, data_dict, quantity_func,
                                average_along=None, **kwargs):
@@ -573,7 +589,6 @@ class Experiment:
             is_dict = isinstance(data, dict)
             fig, ax = plotter(data, **kwargs)
             if is_dict:
-                # This is where we finally get to do iterative
                 legend = []
                 for inner_name, inner_data in data.items():
                     plotter(

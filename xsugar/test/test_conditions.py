@@ -104,3 +104,30 @@ def test_generate_conditions_1to1(exp):
             wavelength=[1, 2, 3], temperature=[25,50,75])
     assert_equal(actual_conditions, desired_conditions)
 
+def test_extract_factors(exp, exp_data):
+    """
+    Tests proper extraction of conditions from arbitrary input keyword
+    arguments.
+    """
+    actual_factors = exp.factors
+    desired_factors = {
+        'wavelength': exp_data['wavelength'],
+        'temperature': exp_data['temperature']}
+    assert_equal(actual_factors, desired_factors)
+
+def test_generate_conditions(exp, exp_data):
+    """
+    Tests that our generator actually generates all the right combinations
+    and in the right order.
+    """
+    expected_conds = [
+        {'wavelength': 1, 'temperature': 25, 'frequency': 8500},
+        {'wavelength': 1, 'temperature': 50, 'frequency': 8500},
+        {'wavelength': 2, 'temperature': 25, 'frequency': 8500},
+        {'wavelength': 2, 'temperature': 50, 'frequency': 8500},
+        {'wavelength': 3, 'temperature': 25, 'frequency': 8500},
+        {'wavelength': 3, 'temperature': 50, 'frequency': 8500},
+    ]
+    for actual_cond, desired_cond in  zip(exp.conditions,
+                                          expected_conds):
+        assert_equal(actual_cond, desired_cond)
