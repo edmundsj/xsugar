@@ -414,12 +414,12 @@ the form of a pandas array.</p>
 
 <dl class="py method">
 <dt id="experiments.Experiment.saveRawResults">
-<code class="sig-name descname">saveRawResults</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_data</span></em>, <em class="sig-param"><span class="n">condition</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.saveRawResults" title="Permalink to this definition">¶</a></dt>
-<dd><p>Saves raw results from the experiment performed with a given condition</p>
+<code class="sig-name descname">saveRawResults</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_data</span></em>, <em class="sig-param"><span class="n">cond</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.saveRawResults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves raw results from the experiment performed with a given condition. If the data is a scalar, saves the results in a single pandas array. If the data is itself a numpy/pandas array, saves the data in its own file for later analysis.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>condition</strong> – Experimental condition as a dictionary</p></li>
+<li><p><strong>cond</strong> – Experimental condition as a dictionary</p></li>
 <li><p><strong>raw_data</strong> – Raw data as a pandas array to save</p></li>
 </ul>
 </dd>
