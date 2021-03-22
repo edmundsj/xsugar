@@ -86,7 +86,7 @@ class Experiment:
         self.data[partial_filename] = raw_data
         if isinstance(raw_data, pd.DataFrame):
             full_filename = self.data_full_path + partial_filename + '.csv'
-            with open(full_filename, 'w+') as fh:
+            with open(full_filename, 'w') as fh:
                 fh.write(str(self.constants) + '\n')
                 raw_data.to_csv(fh, mode='a', index=False)
 
@@ -94,8 +94,8 @@ class Experiment:
             full_filename = self.data_full_path + self.name + '.csv'
             cond_partial = self.conditionFromName(partial_filename,
                     full_condition=False)
-            if not os.path.isfile(full_filename):
-                with open(full_filename, 'w+') as fh:
+            if len(self.data) == 1:
+                with open(full_filename, 'w') as fh:
                     fh.write(str(self.constants) + '\n')
                     for k in cond_partial.keys():
                         fh.write(str(k) + ',')
@@ -403,6 +403,8 @@ class Experiment:
 
     def data_from_master(self, master_data):
         """
+        Converts data from a master data table into a dictionary
+
         :param master_data: Master dataset as a pandas dataframe
         """
         if not isinstance(master_data, pd.DataFrame):
@@ -427,10 +429,14 @@ class Experiment:
 
         return data_dict
 
-    def master_data_dict(self, data_dict=None):
+    def master_data_dict(self, data_dict=None, x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[]):
         """
         Assumes the last final value is the one to be plotted, all
         others are variables we want to plot over.
+
+        :param data_dict: Data dictionary to generate master data dict for
+        :param x_axis_include: List of factors, will include only plots which have the x-axes specified
+        :param c_axis_include: List of factors, will include only plots which have curve families equal to these factors
         """
         if not data_dict:
             data_dict = self.data
@@ -447,6 +453,19 @@ class Experiment:
 
 
         factor_pairs = [x for x in permutations(factors, min(len(factors), 2))]
+        if x_axis_include:
+            factor_pairs = \
+               [(x, c) for x,c in factor_pairs if x in x_axis_include]
+        if c_axis_include:
+            factor_pairs = \
+               [(x, c) for x,c in factor_pairs if c in c_axis_include]
+        if x_axis_exclude:
+            factor_pairs = \
+               [(x, c) for x,c in factor_pairs if x not in x_axis_exclude]
+        if c_axis_exclude:
+            factor_pairs = \
+               [(x, c) for x,c in factor_pairs if c not in c_axis_exclude]
+
         for factor_pair in factor_pairs:
             x_factor, c_factor = factor_pair
             remaining_factors = \
@@ -548,7 +567,7 @@ class Experiment:
         self, data_dict=None, average_along=None,
         quantity_func=None, quantity_name = 'Value', representative='',
         plotter=default_plotter, theory_func=None, theory_kw=None,
-        postfix='', **kwargs):
+        postfix='', x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[], **kwargs):
         """
         Generates figures from loaded data. Currently assumes the data is in
         the form of a pandas array.
@@ -559,6 +578,10 @@ class Experiment:
         :param representative: Which axis to generate a representative plot along (i.e. "replicate". Defaults to None)
         :param theory_func: Theoretical values the data should take. Assumes a function of the form y = f(x, kwargs).
         :param theory_kw: Parameters to feed into theory function. Should be a dictionary with the same names as the data_dict
+        :param x_axis_include: List of factors, will include only plots which have the x-axes specified
+        :param x_axis_exclude: List of factors for which you do not want to be plotted on the x-axis
+        :param c_axis_include: Complete list of factors for which you want to generate c-axis plots
+        :param c_axis_exclude: Complete list of factors for which you do not want to be plotted on the c-axis
         """
         if average_along:
             if postfix != '': postfix += self.major_separator
@@ -576,13 +599,15 @@ class Experiment:
             dict_to_plot = self.derived_quantity(
                 data_dict, average_along=average_along,
                 quantity_func=quantity_func, **kwargs)
-            random_value = list(dict_to_plot.values())[0]
-            if isinstance(random_value, float):
+            first_value = list(dict_to_plot.values())[0]
+            if isinstance(first_value, (int, float)):
                 # Generate a bunch of dictionaries with the appropriate
                 # names from this mmaster table so we can plot them.
-                master_data = self.master_data(dict_to_plot,
-                                              value_name=quantity_name)
-                dict_to_plot = self.master_data_dict(master_data)
+                dict_to_plot = self.master_data_dict(
+                        master_data, x_axis_include=x_axis_include,
+                        x_axis_exclude=x_axis_exclude,
+                        c_axis_include=c_axis_include,
+                        c_axis_exclude=c_axis_exclude)
         else:
             dict_to_plot = data_dict
 

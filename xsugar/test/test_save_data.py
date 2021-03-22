@@ -92,14 +92,16 @@ def test_save_raw_scalar(exp, exp_data):
 def test_save_raw_scalar_multiple(exp, exp_data):
     data_to_write = 4.05
     data_desired = pd.DataFrame({
-            'wavelength': [1, 1],
+            'wavelength': [1, 2],
             'temperature': [25, 25],
             'Value': [data_to_write, data_to_write]})
-    cond = {'wavelength': 1, 'temperature': 25, 'frequency':
+    cond1 = {'wavelength': 1, 'temperature': 25, 'frequency':
+            exp_data['frequency']}
+    cond2 = {'wavelength': 2, 'temperature': 25, 'frequency':
             exp_data['frequency']}
     filename_desired = 'TEST1.csv'
-    exp.saveRawResults(data_to_write, cond)
-    exp.saveRawResults(data_to_write, cond)
+    exp.saveRawResults(data_to_write, cond1)
+    exp.saveRawResults(data_to_write, cond2)
     with open(exp_data['data_full_path'] + filename_desired) as fh:
         metadata_actual = literal_eval(fh.readline())
         data_actual = pd.read_csv(fh)

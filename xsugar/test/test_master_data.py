@@ -178,6 +178,134 @@ def testGenerateMasterDataDict2Var(exp, exp_data):
     actual_data = exp.master_data_dict(data_dict)
     assertDataDictEqual(actual_data, desired_data)
 
+def test_master_data_dict_includue_x(exp, exp_data, convert_name):
+    names = [convert_name(name) for name in \
+        [
+        'TEST1~wavelength=1~temperature=25.0',
+        'TEST1~wavelength=2~temperature=25.0',
+        'TEST1~wavelength=1~temperature=35.0',
+        'TEST1~wavelength=2~temperature=35.0',
+        ]]
+    name_all = convert_name('TEST1~wavelength=all')
+    data_dict = {
+        names[0]: 1.0,
+        names[1]: 2.0,
+        names[2]: 3.0,
+        names[3]: 4.0,
+    }
+    desired_data = {
+        convert_name('TEST1~wavelength=all'): {
+            convert_name('TEST1~temperature=25.0'):
+                pd.DataFrame({
+                'wavelength': [1, 2],
+                'Value': [1.0, 2.0]}),
+
+            convert_name('TEST1~temperature=35.0'):
+                pd.DataFrame({
+                'wavelength': [1, 2],
+                'Value': [3.0, 4.0]}),
+        },
+    }
+    actual_data = exp.master_data_dict(
+            data_dict, x_axis_include=['wavelength'])
+    assertDataDictEqual(actual_data, desired_data)
+
+def test_master_data_dict_exclude_x(exp, exp_data, convert_name):
+    names = [convert_name(name) for name in \
+        [
+        'TEST1~wavelength=1~temperature=25.0',
+        'TEST1~wavelength=2~temperature=25.0',
+        'TEST1~wavelength=1~temperature=35.0',
+        'TEST1~wavelength=2~temperature=35.0',
+        ]]
+    name_all = convert_name('TEST1~temperature=all')
+    data_dict = {
+        names[0]: 1.0,
+        names[1]: 2.0,
+        names[2]: 3.0,
+        names[3]: 4.0,
+    }
+    desired_data = {
+        convert_name('TEST1~temperature=all'): {
+            convert_name('TEST1~wavelength=1'):
+                pd.DataFrame({
+                'temperature': [25.0, 35.0],
+                'Value': [1.0, 3.0]}),
+
+            convert_name('TEST1~wavelength=2'):
+                pd.DataFrame({
+                'temperature': [25.0, 35.0],
+                'Value': [2.0, 4.0]}),
+        },
+    }
+    actual_data = exp.master_data_dict(
+            data_dict, x_axis_exclude=['wavelength'])
+    assertDataDictEqual(actual_data, desired_data)
+
+def test_master_data_dict_includue_c(exp, exp_data, convert_name):
+    names = [convert_name(name) for name in \
+        [
+        'TEST1~wavelength=1~temperature=25.0',
+        'TEST1~wavelength=2~temperature=25.0',
+        'TEST1~wavelength=1~temperature=35.0',
+        'TEST1~wavelength=2~temperature=35.0',
+        ]]
+    name_all = convert_name('TEST1~wavelength=all')
+    data_dict = {
+        names[0]: 1.0,
+        names[1]: 2.0,
+        names[2]: 3.0,
+        names[3]: 4.0,
+    }
+    desired_data = {
+        convert_name('TEST1~wavelength=all'): {
+            convert_name('TEST1~temperature=25.0'):
+                pd.DataFrame({
+                'wavelength': [1, 2],
+                'Value': [1.0, 2.0]}),
+
+            convert_name('TEST1~temperature=35.0'):
+                pd.DataFrame({
+                'wavelength': [1, 2],
+                'Value': [3.0, 4.0]}),
+        },
+    }
+    actual_data = exp.master_data_dict(
+            data_dict, c_axis_include=['temperature'])
+    assertDataDictEqual(actual_data, desired_data)
+
+def test_master_data_dict_exclude_c(exp, exp_data, convert_name):
+    names = [convert_name(name) for name in \
+        [
+        'TEST1~wavelength=1~temperature=25.0',
+        'TEST1~wavelength=2~temperature=25.0',
+        'TEST1~wavelength=1~temperature=35.0',
+        'TEST1~wavelength=2~temperature=35.0',
+        ]]
+    name_all = convert_name('TEST1~wavelength=all')
+    data_dict = {
+        names[0]: 1.0,
+        names[1]: 2.0,
+        names[2]: 3.0,
+        names[3]: 4.0,
+    }
+    desired_data = {
+        convert_name('TEST1~wavelength=all'): {
+            convert_name('TEST1~temperature=25.0'):
+                pd.DataFrame({
+                'wavelength': [1, 2],
+                'Value': [1.0, 2.0]}),
+
+            convert_name('TEST1~temperature=35.0'):
+                pd.DataFrame({
+                'wavelength': [1, 2],
+                'Value': [3.0, 4.0]}),
+        },
+    }
+    actual_data = exp.master_data_dict(
+            data_dict, c_axis_exclude=['wavelength'])
+    assertDataDictEqual(actual_data, desired_data)
+
 def testGenerateMasterDataDict3Var(exp, exp_data, convert_name):
     js, ns = exp_data['major_separator'], exp_data['minor_separator']
     master_data = pd.DataFrame({
