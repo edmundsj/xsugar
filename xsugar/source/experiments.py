@@ -6,9 +6,8 @@ import re
 from io import BytesIO
 from pathlib import Path
 from matplotlib.figure import Figure
-from sugarplot import plt, prettifyPlot, default_plotter
-from spectralpy import power_spectrum, title_to_quantity
-from spectralpy import to_standard_quantity, powerSpectrumPlot
+from sugarplot import plt, prettifyPlot, default_plotter, power_spectrum_plot
+from spectralpy import power_spectrum, title_to_quantity, to_standard_quantity
 from sciparse import parse_xrd, parse_default
 from itertools import permutations
 
@@ -39,6 +38,10 @@ class Experiment:
         self.metadata = {}
         self.verbose = verbose
         self.measure_func = measure_func
+        if measure_func:
+            self.measure_name = measure_func.__name__
+        else:
+            self.measure_name = 'Value'
 
         if kind == 'designs' or kind == 'design':
             self.data_full_path = base_path + '/designs/'+ name + '/data/'
@@ -99,7 +102,7 @@ class Experiment:
                     fh.write(str(self.constants) + '\n')
                     for k in cond_partial.keys():
                         fh.write(str(k) + ',')
-                    fh.write('Value\n')
+                    fh.write(self.measure_name + '\n')
             with open(full_filename, 'a') as fh:
                 for v in cond_partial.values():
                     fh.write(str(v) + ',')
@@ -193,6 +196,14 @@ class Experiment:
         return_conds = []
         [return_conds.append(c) for c in conds if c not in return_conds]
         return return_conds
+
+    def drop_name(self, name):
+        return name.replace(self.name + self.major_separator, '')
+
+    def prettify_name(self, name):
+        name = self.drop_name(name)
+        name = name.replace('~', ', ')
+        return name
 
     def nameFromCondition(self, condition):
         """
@@ -385,6 +396,8 @@ class Experiment:
         """
         if data_dict is None: data_dict = self.data
         return_frame = pd.DataFrame()
+        if self.measure_func:
+            value_name = self.measure_name
 
         for name in data_dict.keys():
             conds = self.conditionFromName(name, full_condition=False)
@@ -565,9 +578,10 @@ class Experiment:
     # that have a clearly-delineated purpose.
     def plot(
         self, data_dict=None, average_along=None,
-        quantity_func=None, quantity_name = 'Value', representative='',
-        plotter=default_plotter, theory_func=None, theory_kw=None,
-        postfix='', x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[], **kwargs):
+        quantity_func=None, representative='',
+        plotter=default_plotter, line_kw={}, subplot_kw={},
+        theory_func=None, theory_kw=None,
+        postfix='', x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[]):
         """
         Generates figures from loaded data. Currently assumes the data is in
         the form of a pandas array.
@@ -583,11 +597,15 @@ class Experiment:
         :param c_axis_include: Complete list of factors for which you want to generate c-axis plots
         :param c_axis_exclude: Complete list of factors for which you do not want to be plotted on the c-axis
         """
+        plotted_figs = []
+        plotted_axes = []
         if average_along:
             if postfix != '': postfix += self.major_separator
             postfix += 'averaged'
+
         if not data_dict:
             data_dict = self.data
+
         if representative:
             data_dict = self.group_data(data_dict, group_along=representative)
             for k in data_dict.keys():
@@ -598,39 +616,57 @@ class Experiment:
         if quantity_func:
             dict_to_plot = self.derived_quantity(
                 data_dict, average_along=average_along,
-                quantity_func=quantity_func, **kwargs)
-            first_value = list(dict_to_plot.values())[0]
-            if isinstance(first_value, (int, float)):
-                # Generate a bunch of dictionaries with the appropriate
-                # names from this mmaster table so we can plot them.
-                dict_to_plot = self.master_data_dict(
-                        master_data, x_axis_include=x_axis_include,
-                        x_axis_exclude=x_axis_exclude,
-                        c_axis_include=c_axis_include,
-                        c_axis_exclude=c_axis_exclude)
+                quantity_func=quantity_func)
         else:
             dict_to_plot = data_dict
+
+        first_value = list(dict_to_plot.values())[0]
+        if isinstance(first_value, (int, float)):
+            # Generate a bunch of dictionaries with the appropriate
+            # names from this mmaster table so we can plot them.
+            dict_to_plot = self.master_data_dict(
+                    dict_to_plot, x_axis_include=x_axis_include,
+                    x_axis_exclude=x_axis_exclude,
+                        c_axis_include=c_axis_include,
+                        c_axis_exclude=c_axis_exclude)
 
         for name, data in dict_to_plot.items():
             is_pandas = isinstance(data, pd.DataFrame)
             is_dict = isinstance(data, dict)
-            fig, ax = plotter(data, **kwargs)
             if is_dict:
+                fig, ax = None, None
                 legend = []
                 for inner_name, inner_data in data.items():
-                    plotter(
-                        data, fig=fig, ax=ax, theory_func=theory_func,
-                        theory_kw=theory_kw, **kwargs)
-                    legend.append(inner_name)
+                    if not fig:
+                        fig, ax = plotter(
+                            inner_data, theory_func=theory_func,
+                            theory_kw=theory_kw, subplot_kw=subplot_kw,
+                            line_kw=line_kw)
+                    else:
+                        plotter(
+                            inner_data, fig=fig, ax=ax,
+                            theory_func=theory_func, theory_kw=theory_kw,
+                            subplot_kw=subplot_kw, line_kw=line_kw)
+                    legend.append(self.prettify_name(inner_name))
                 ax.legend(legend)
+                plotted_figs.append(fig)
+                plotted_axes.append(ax)
+            elif is_pandas:
+                fig, ax = plotter(data, line_kw=line_kw,
+                        theory_func=theory_func, theory_kw=theory_kw,
+                        subplot_kw=subplot_kw)
+                plotted_figs.append(fig)
+                plotted_axes.append(ax)
 
-            prettifyPlot(fig=fig,ax=ax)
             if postfix != '':
                 full_filename = self.figures_full_path + name + \
                         self.major_separator + postfix + '.png'
             else:
                 full_filename = self.figures_full_path + name + '.png'
+
+            prettifyPlot(fig=fig,ax=ax)
             fig.savefig(full_filename)
+        return plotted_figs, plotted_axes
 
     def plotPSD(self, average_along=None,
                            representative=False, **kwargs):
@@ -638,5 +674,5 @@ class Experiment:
             return power_spectrum(data, **kwargs)
         self.plot(
             average_along=average_along,
-            quantity_func=psdFunction, plotter=powerSpectrumPlot,
+            quantity_func=psdFunction, plotter=power_spectrum_plot,
             representative=representative, postfix='PSD', **kwargs)

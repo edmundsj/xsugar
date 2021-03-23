@@ -69,9 +69,14 @@ def test_average_data_pandas(exp, convert_name):
     averaged_data_actual_first = exp.average_data(data_dict,
             average_along='replicate', averaging_type='first')
     averaged_data_actual_last = exp.average_data(data_dict,
-            average_along='replicate', averaging_type='first')
+            average_along='replicate', averaging_type='last')
     assertDataDictEqual(averaged_data_actual_first, averaged_data_desired)
     assertDataDictEqual(averaged_data_actual_last, averaged_data_desired)
+
+def test_average_data_unsupported(exp):
+    with pytest.raises(ValueError):
+        averaged_data_actual = exp.average_data(
+                average_along='replicate', averaging_type='YOLO')
 
 def testExtractDerivedQuantityMean(exp, convert_name):
     """

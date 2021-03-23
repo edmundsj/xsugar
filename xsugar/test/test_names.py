@@ -85,3 +85,14 @@ def testConditionFromNameWithID(exp, exp_data):
     condition_actual = exp.conditionFromName(name_desired)
     assert_equal(condition_actual, condition_desired)
 
+def test_drop_name(exp, convert_name):
+    initial_name = convert_name('TEST1~wavelength=0.01')
+    desired_name = convert_name('wavelength=0.01')
+    actual_name = exp.drop_name(initial_name)
+    assert_equal(actual_name, desired_name)
+
+def test_prettify_name(exp, convert_name):
+    initial_name = convert_name('TEST1~wavelength=0.01~temperature=25.0')
+    desired_name = 'wavelength=0.01, temperature=25.0'
+    actual_name = exp.prettify_name(initial_name)
+    assert_equal(actual_name, desired_name)
