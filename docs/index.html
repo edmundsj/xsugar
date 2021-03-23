@@ -219,7 +219,8 @@ of a file. Discards the base name (i.e. LIA1-1).</p>
 <dl class="py method">
 <dt id="experiments.Experiment.data_from_master">
 <code class="sig-name descname">data_from_master</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">master_data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.data_from_master" title="Permalink to this definition">¶</a></dt>
-<dd><dl class="field-list simple">
+<dd><p>Converts data from a master data table into a dictionary</p>
+<dl class="field-list simple">
 <dt class="field-odd">Parameters</dt>
 <dd class="field-odd"><p><strong>master_data</strong> – Master dataset as a pandas dataframe</p>
 </dd>
@@ -360,9 +361,18 @@ experiment, if available.</p>
 
 <dl class="py method">
 <dt id="experiments.Experiment.master_data_dict">
-<code class="sig-name descname">master_data_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.master_data_dict" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">master_data_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_axis_include</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">x_axis_exclude</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">c_axis_include</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">c_axis_exclude</span><span class="o">=</span><span class="default_value">[]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.master_data_dict" title="Permalink to this definition">¶</a></dt>
 <dd><p>Assumes the last final value is the one to be plotted, all
 others are variables we want to plot over.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_dict</strong> – Data dictionary to generate master data dict for</p></li>
+<li><p><strong>x_axis_include</strong> – List of factors, will include only plots which have the x-axes specified</p></li>
+<li><p><strong>c_axis_include</strong> – List of factors, will include only plots which have curve families equal to these factors</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -384,7 +394,7 @@ with the metadata truncated, experiment name included</p>
 
 <dl class="py method">
 <dt id="experiments.Experiment.plot">
-<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param">data_dict=None</em>, <em class="sig-param">average_along=None</em>, <em class="sig-param">quantity_func=None</em>, <em class="sig-param">quantity_name='Value'</em>, <em class="sig-param">representative=''</em>, <em class="sig-param">plotter=&lt;function default_plotter&gt;</em>, <em class="sig-param">theory_func=None</em>, <em class="sig-param">theory_kw=None</em>, <em class="sig-param">postfix=''</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.plot" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param">data_dict=None</em>, <em class="sig-param">average_along=None</em>, <em class="sig-param">quantity_func=None</em>, <em class="sig-param">quantity_name='Value'</em>, <em class="sig-param">representative=''</em>, <em class="sig-param">plotter=&lt;function default_plotter&gt;</em>, <em class="sig-param">theory_func=None</em>, <em class="sig-param">theory_kw=None</em>, <em class="sig-param">postfix=''</em>, <em class="sig-param">x_axis_include=[]</em>, <em class="sig-param">x_axis_exclude=[]</em>, <em class="sig-param">c_axis_include=[]</em>, <em class="sig-param">c_axis_exclude=[]</em>, <em class="sig-param">**kwargs</em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.plot" title="Permalink to this definition">¶</a></dt>
 <dd><p>Generates figures from loaded data. Currently assumes the data is in
 the form of a pandas array.</p>
 <dl class="field-list simple">
@@ -396,6 +406,10 @@ the form of a pandas array.</p>
 <li><p><strong>representative</strong> – Which axis to generate a representative plot along (i.e. “replicate”. Defaults to None)</p></li>
 <li><p><strong>theory_func</strong> – Theoretical values the data should take. Assumes a function of the form y = f(x, kwargs).</p></li>
 <li><p><strong>theory_kw</strong> – Parameters to feed into theory function. Should be a dictionary with the same names as the data_dict</p></li>
+<li><p><strong>x_axis_include</strong> – List of factors, will include only plots which have the x-axes specified</p></li>
+<li><p><strong>x_axis_exclude</strong> – List of factors for which you do not want to be plotted on the x-axis</p></li>
+<li><p><strong>c_axis_include</strong> – Complete list of factors for which you want to generate c-axis plots</p></li>
+<li><p><strong>c_axis_exclude</strong> – Complete list of factors for which you do not want to be plotted on the c-axis</p></li>
 </ul>
 </dd>
 </dl>
