@@ -110,6 +110,24 @@ def test_group_scalar_data(exp, convert_name):
 
     assertDataDictEqual(actual_data, desired_data)
 
+def test_group_unit_data(exp, convert_name, ureg):
+    """
+    Tests whether we can compress the derived quantity as a bunch of
+    scalar-only dicts into a bunch of plottable and usaable pandas array.
+    """
+    scalar_data = {
+        convert_name('TEST1~wavelength-1~temperature-25'): 1 * ureg.mV,
+        convert_name('TEST1~wavelength-1~temperature-35'): 2 * ureg.mV}
+
+    desired_data = {convert_name('TEST1~wavelength-1'): {
+        convert_name('TEST1~wavelength-1~temperature-25'): 1 * ureg.mV,
+        convert_name('TEST1~wavelength-1~temperature-35'): 2 * ureg.mV ,}}
+
+    actual_data = exp['exp'].group_data(
+        data_dict=scalar_data, group_along='temperature')
+
+    assertDataDictEqual(actual_data, desired_data)
+
 def test_group_by_name(exp, convert_name):
 
     actual_data = exp['exp'].group_data(

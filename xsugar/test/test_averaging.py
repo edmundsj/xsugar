@@ -86,8 +86,8 @@ def testExtractDerivedQuantityMean(exp, convert_name):
                                'Photocurrent (nA)': [0.5, 0.6, 0.7]})
     fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [1, 1.2, 1.4]})
-    mean_data_1 = 0.6
-    mean_data_2 = 1.2
+    mean_data_1 = np.float64(0.6)
+    mean_data_2 = np.float64(1.2)
     name_1 = convert_name('TEST1~wavelength-1~replicate-0')
     name_2 = convert_name('TEST1~wavelength-1~replicate-1')
     desired_quantities = {name_1: mean_data_1, name_2: mean_data_2}

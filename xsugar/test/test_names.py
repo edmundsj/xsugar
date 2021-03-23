@@ -7,7 +7,7 @@ import pandas as pd
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
-from xsugar import Experiment
+from xsugar import Experiment, assertDataDictEqual, ureg
 from ast import literal_eval
 
 def testNameFromCondition(exp, exp_data):
@@ -34,6 +34,17 @@ def testNameFromConditionWithID(exp, exp_data):
     filename_actual = exp.nameFromCondition(condition)
     assert_equal(filename_actual, filename_desired)
 
+def test_name_from_condition_units(convert_name):
+    sampling_frequency = 1.0 * ureg.Hz
+    temperature = ureg.K * np.array([300, 305])
+    wavelength = ureg.nm * np.array([500, 505])
+    exp = Experiment(name='TEST1', kind='test',
+            sampling_frequenc=sampling_frequency,
+            wavelength=wavelength, temperature=temperature)
+    actual_name = exp.nameFromCondition(exp.conditions[0])
+    desired_name = convert_name('TEST1~wavelength=500nm~temperature=300K')
+    assert_equal(actual_name, desired_name)
+
 def testConditionFromName(exp, exp_data):
     """
     Tests whether we can generate a condition from a specified name
@@ -57,6 +68,15 @@ def testConditionFromNamePartial(exp, exp_data):
     condition_actual = exp.conditionFromName(
         filename_desired, full_condition=False)
     assert_equal(condition_actual, condition_desired)
+
+def test_condition_from_name_units(exp,exp_data, convert_name):
+    name = convert_name('TEST1~wavelength=100nm~temperature=25K')
+    desired_condition = {
+        'wavelength': ureg.nm * 100,
+        'temperature': ureg.degK * 25,
+        'frequency': exp_data['frequency']}
+    actual_condition = exp.conditionFromName(name)
+    assertDataDictEqual(actual_condition, desired_condition)
 
 def testConditionFromNameMetadata(exp, exp_data):
     js, ns = exp_data['major_separator'], exp_data['minor_separator']

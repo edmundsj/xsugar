@@ -2,14 +2,14 @@ import itertools
 import numpy as np
 import pandas as pd
 import os
-import re
-from io import BytesIO
 from pathlib import Path
+import pint
 from matplotlib.figure import Figure
 from sugarplot import plt, prettifyPlot, default_plotter, power_spectrum_plot
-from spectralpy import power_spectrum, title_to_quantity, to_standard_quantity
-from sciparse import parse_xrd, parse_default
+from spectralpy import power_spectrum
+from sciparse import parse_xrd, parse_default, is_scalar, dict_to_string, title_to_quantity, to_standard_quantity, quantity_to_title
 from itertools import permutations
+from xsugar import ureg
 
 class Experiment:
     """
@@ -41,7 +41,7 @@ class Experiment:
         if measure_func:
             self.measure_name = measure_func.__name__
         else:
-            self.measure_name = 'Value'
+            self.measure_name = None
 
         if kind == 'designs' or kind == 'design':
             self.data_full_path = base_path + '/designs/'+ name + '/data/'
@@ -51,8 +51,12 @@ class Experiment:
             self.figures_full_path = self.base_path + '/figures/' + kind + '/' + name + '/'
         self.factors = {k:v for k, v in kwargs.items() \
              if isinstance(v, (list, np.ndarray))}
+        for k, v in kwargs.items():
+            if isinstance(v, pint.Quantity):
+                if isinstance(v.magnitude, (np.ndarray, list)):
+                    self.factors[k] = v
         self.constants = {k:v for k, v in kwargs.items() \
-                 if not isinstance(v, (list, np.ndarray))}
+                 if k not in self.factors.keys()}
 
         self.conditions = self.generate_conditions(**self.factors)
 
@@ -78,6 +82,7 @@ class Experiment:
         self.data[condition_name] = data
         self.saveRawResults(data, cond)
 
+# This is a mess. it should be refactored making use of external parsers in the sciparse library. Move all the unit stuff, and all the writing, out there.
     def saveRawResults(self, raw_data, cond):
         """
         Saves raw results from the experiment performed with a given condition. If the data is a scalar, saves the results in a single pandas array. If the data is itself a numpy/pandas array, saves the data in its own file for later analysis.
@@ -87,26 +92,53 @@ class Experiment:
         """
         partial_filename = self.nameFromCondition(cond)
         self.data[partial_filename] = raw_data
-        if isinstance(raw_data, pd.DataFrame):
+        data_is_scalar = is_scalar(raw_data)
+        data_is_pandas = isinstance(raw_data, pd.DataFrame)
+        if data_is_pandas:
             full_filename = self.data_full_path + partial_filename + '.csv'
             with open(full_filename, 'w') as fh:
                 fh.write(str(self.constants) + '\n')
                 raw_data.to_csv(fh, mode='a', index=False)
 
-        elif isinstance(raw_data, (float, int)):
+        elif data_is_scalar:
             full_filename = self.data_full_path + self.name + '.csv'
             cond_partial = self.conditionFromName(partial_filename,
                     full_condition=False)
             if len(self.data) == 1:
                 with open(full_filename, 'w') as fh:
-                    fh.write(str(self.constants) + '\n')
-                    for k in cond_partial.keys():
-                        fh.write(str(k) + ',')
-                    fh.write(self.measure_name + '\n')
+                    metadata_line = dict_to_string(self.constants) + '\n'
+                    fh.write(metadata_line)
+                    for k, v in cond_partial.items():
+                        if isinstance(v, pint.Quantity):
+                            title_name = quantity_to_title(
+                                    v, name=k)
+                        else:
+                            title_name = k
+                        fh.write(title_name + ',')
+                    if isinstance(raw_data, pint.Quantity):
+                        data_name = quantity_to_title(
+                                raw_data, name=self.measure_name)
+                    else:
+                        if self.measure_name:
+                            data_name = self.measure_name
+                        else:
+                            data_name = 'Value'
+
+                    fh.write(data_name + '\n')
+
             with open(full_filename, 'a') as fh:
                 for v in cond_partial.values():
-                    fh.write(str(v) + ',')
-                fh.write(str(raw_data) + '\n')
+                    if isinstance(v, pint.Quantity):
+                        quantity_name = str(v.magnitude)
+                    else:
+                        quantity_name = str(v)
+                    fh.write(quantity_name + ',')
+                if isinstance(raw_data, pint.Quantity):
+                    raw_string = str(raw_data.magnitude)
+                else:
+                    raw_string = str(raw_data)
+
+                fh.write(raw_string + '\n')
         else:
             raise ValueError(f'Cannot save data type {type(raw_data)}. Can only currently handle types of float, int, and pd.DataFrame')
 
@@ -221,7 +253,12 @@ class Experiment:
             if key not in self.constants.keys() and key not in \
             self.metadata.keys():
                 partial_filename += self.major_separator + key + \
-                self.minor_separator + str(val)
+                    self.minor_separator
+                if isinstance(val, pint.Quantity):
+                    qt_str = '{:~}'.format(val).replace(' ', '')
+                    partial_filename += qt_str
+                else:
+                    partial_filename += str(val)
 
         return partial_filename
 
@@ -261,10 +298,9 @@ class Experiment:
         cond.update({sub.split(self.minor_separator)[0]:sub.split(self.minor_separator)[1] \
                 for sub in sub_components})
         for key, val in cond.items():
-            try: cond[key] = int(val)
-            except ValueError:
-                try: cond[key] = float(val)
-                except ValueError: cond[key] = val
+            try: cond[key] = ureg.parse_expression(val)
+            except pint.errors.UndefinedUnitError:
+                cond[key] = val
         if full_condition:
             cond.update(self.constants)
             if name in self.metadata.keys():
@@ -283,12 +319,10 @@ class Experiment:
         :param average_along: Axis to average along (i.e. replicate or None)
         """
         derived_dict = {}
-        is_scalar = False
         for name, data in data_dict.items():
             cond = self.conditionFromName(name)
             quantity = quantity_func(data, cond, **kwargs)
             derived_dict[name] = quantity
-            if isinstance(quantity, float): is_scalar = True
 
         if average_along != None:
             derived_dict = self.average_data(
@@ -299,7 +333,8 @@ class Experiment:
         """
         Saves the derived quantities in master_data to a file with the name of the experiment
         """
-        if not data_dict: data_dict = self.data
+        if not data_dict:
+            data_dict = self.data
         partial_filename = self.name
         full_filename = self.data_full_path + partial_filename + '.csv'
         with open(full_filename, 'w+') as fh:
@@ -394,7 +429,9 @@ class Experiment:
         NOTE: Currently only designed for data_dicts with scalar values. Not design for data frames or multi-valued datasets. I need to fix this.
 
         """
-        if data_dict is None: data_dict = self.data
+        if not data_dict:
+            data_dict = self.data
+
         return_frame = pd.DataFrame()
         if self.measure_func:
             value_name = self.measure_name
@@ -403,13 +440,31 @@ class Experiment:
             conds = self.conditionFromName(name, full_condition=False)
             new_row = pd.DataFrame()
             for k, v in conds.items():
-                new_row[k] = [v]
-            new_row[value_name] = data_dict[name]
+                if isinstance(v, pint.Quantity):
+                    row_title = quantity_to_title(
+                            v, name=k)
+                    row_value = v.magnitude
+                else:
+                    row_title = k
+                    row_value = v
+                new_row[row_title] = [row_value]
+            quantity_value = data_dict[name]
+            if isinstance(quantity_value, pint.Quantity):
+                row_title = quantity_to_title(
+                        quantity_value,
+                        name=self.measure_name)
+                row_value = quantity_value.magnitude
+            else:
+                row_title = value_name
+                row_value = quantity_value
+
+            new_row[row_title] = row_value
             new_row.index = [len(return_frame)]
             return_frame = return_frame.append(new_row)
 
         for col in return_frame.columns.values:
-            if all(return_frame[col][0] == return_frame[col]):
+            if all(return_frame[col][0] == return_frame[col]) and \
+                     len(return_frame) != 1:
                 return_frame = return_frame.drop(col, axis=1)
 
         return return_frame
@@ -423,7 +478,21 @@ class Experiment:
         if not isinstance(master_data, pd.DataFrame):
              raise ValueError(f"Unspported data type {type(master_data)}. Can only support pandas DataFrame")
 
-        col_names = master_data.columns.values[:-1]
+        col_names = master_data.columns.values
+        col_mapping = {}
+        col_units = []
+        for col in col_names:
+            col_substrings = col.split(' ')
+            base_name = col_substrings[0]
+            col_mapping[col] = base_name
+            if len(col_substrings) > 1:
+                unit_substring = col_substrings[1]
+                col_units.append(
+                      ureg.parse_expression(unit_substring))
+            else:
+                col_units.append(1)
+
+        master_data = master_data.rename(columns=col_mapping)
 
         data_last = master_data.iloc[:,-1]
         data_without_last = master_data.iloc[:,:-1]
@@ -435,10 +504,13 @@ class Experiment:
             reduced_names = regular_row.index[:-1]
             reduced_values, last_val = \
                 list(tuple_row)[:-1], list(tuple_row)[-1]
+            reduced_values = [v * unit for v, unit in \
+                             zip(reduced_values, col_units)]
+
             cond = {cname: val for cname, val in \
                 zip(reduced_names, reduced_values)}
             name = self.nameFromCondition(cond)
-            data_dict[name] = last_val
+            data_dict[name] = last_val * col_units[-1]
 
         return data_dict
 
@@ -544,7 +616,7 @@ class Experiment:
             first_name  = list(group.keys())[0]
             first_item = list(group.values())[0]
             is_pandas = isinstance(first_item, pd.DataFrame)
-            is_scalar = isinstance(first_item, (int, float))
+            data_is_scalar = is_scalar(first_item)
             N_items = len(group)
 
             if is_pandas:
@@ -563,7 +635,7 @@ class Experiment:
                 else:
                      raise ValueError(f'Averaging type {averaging_type} not recognized. Available types are "first" and "last"')
 
-            elif is_scalar:
+            elif data_is_scalar:
                 averaged_data[group_name] = first_item
                 for data in group.values():
                     averaged_data[group_name] += data
@@ -621,7 +693,8 @@ class Experiment:
             dict_to_plot = data_dict
 
         first_value = list(dict_to_plot.values())[0]
-        if isinstance(first_value, (int, float)):
+        data_is_scalar = is_scalar(first_value)
+        if data_is_scalar:
             # Generate a bunch of dictionaries with the appropriate
             # names from this mmaster table so we can plot them.
             dict_to_plot = self.master_data_dict(

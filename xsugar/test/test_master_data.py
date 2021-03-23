@@ -9,7 +9,7 @@ from xsugar import Experiment
 from ast import literal_eval
 from itertools import zip_longest
 from spectralpy import power_spectrum
-from xsugar import assertDataDictEqual
+from xsugar import assertDataDictEqual, ureg
 
 @pytest.fixture
 def exp(path_data):
@@ -41,6 +41,16 @@ def testGenerateMasterData1Var(exp, exp_data):
         'Value': [1, 2]})
     actual_data = exp.master_data(data_dict=scalar_data)
     assert_frame_equal(actual_data, desired_data)
+
+def test_master_data_units(exp_units, convert_name):
+    name = convert_name('TEST1~wavelength=25nm~temperature=305K')
+    data_dict = {name: ureg.mV * 1.5}
+    desired_master_data = pd.DataFrame({
+            'wavelength (nm)': [25],
+            'temperature (K)': [305],
+            'voltage (mV)': [1.5]})
+    actual_master_data = exp_units.master_data(data_dict)
+    assert_frame_equal(actual_master_data, desired_master_data)
 
 def testGenerateMasterData2Var(exp, exp_data):
     js, ns = exp_data['major_separator'], exp_data['minor_separator']
@@ -77,6 +87,16 @@ def test_data_from_master(exp, exp_data):
         name2: 4
     }
     actual_data = exp.data_from_master(master_data)
+    assertDataDictEqual(actual_data, desired_data)
+
+def test_data_from_master_units(exp_units, convert_name):
+    desired_name = convert_name('TEST1~wavelength=25nm~temperature=305K')
+    master_data = pd.DataFrame({
+            'wavelength (nm)': [25],
+            'temperature (K)': [305],
+            'voltage (mV)': [1.5]})
+    desired_data = {desired_name: 1.5 * ureg.mV}
+    actual_data = exp_units.data_from_master(master_data)
     assertDataDictEqual(actual_data, desired_data)
 
 def test_data_from_master_2var(exp, exp_data):
@@ -122,6 +142,20 @@ def testGenerateMasterDataDict1Var(exp, exp_data):
                 'wavelength': [1, 2],
                 'Value': [3.0, 4.0]})}
     actual_data = exp.master_data_dict(data_dict)
+    assertDataDictEqual(actual_data, desired_data)
+
+def test_master_data_dict_1var_units(exp_units, convert_name):
+    name1 = convert_name('TEST1~wavelength=1nm')
+    name2 = convert_name('TEST1~wavelength=2nm')
+    name_all = convert_name('TEST1~wavelength=all')
+    data_dict = {
+        name1: 3.0 * ureg.nA,
+        name2: 4.0 * ureg.nA}
+    desired_data = {
+        name_all: pd.DataFrame({
+                'wavelength (nm)': [1, 2],
+                'current (nA)': [3.0, 4.0]})}
+    actual_data = exp_units.master_data_dict(data_dict)
     assertDataDictEqual(actual_data, desired_data)
 
 def testGenerateMasterDataDict2Var(exp, exp_data):

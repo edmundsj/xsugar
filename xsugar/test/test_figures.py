@@ -8,7 +8,7 @@ import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
 from matplotlib.figure import Figure
-from xsugar import Experiment
+from xsugar import Experiment, ureg
 from sugarplot import assert_figures_equal, prettifyPlot
 from ast import literal_eval
 
@@ -122,6 +122,25 @@ def test_generate_plot_1var(exp, convert_name):
     actual_ax = actual_axes[0]
     desired_fig = Figure()
     desired_ax = desired_fig.subplots(subplot_kw={'xlabel': 'wavelength', 'ylabel': 'Value'})
+    desired_ax.plot([1, 2], [1.0, 2.0])
+    prettifyPlot(fig=desired_fig, ax=desired_ax)
+    assert_figures_equal(actual_fig, desired_fig)
+
+def test_generate_plot_1var_units(exp_units, convert_name):
+    names = [convert_name(name) for name in \
+        [
+        'TEST1~wavelength=1nm',
+        'TEST1~wavelength=2nm',
+        ]]
+    data_dict = {
+        names[0]: 1.0 * ureg.nA,
+        names[1]: 2.0 * ureg.nA,
+    }
+    actual_figs, actual_axes = exp_units.plot(data_dict)
+    actual_fig = actual_figs[0]
+    actual_ax = actual_axes[0]
+    desired_fig = Figure()
+    desired_ax = desired_fig.subplots(subplot_kw={'xlabel': 'wavelength (nm)', 'ylabel': 'current (nA)'})
     desired_ax.plot([1, 2], [1.0, 2.0])
     prettifyPlot(fig=desired_fig, ax=desired_ax)
     assert_figures_equal(actual_fig, desired_fig)

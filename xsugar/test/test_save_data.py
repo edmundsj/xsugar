@@ -9,6 +9,7 @@ import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
 from xsugar import Experiment, assertDataDictEqual
+from sciparse import dict_to_string
 from ast import literal_eval
 from itertools import zip_longest
 from pathlib import Path
@@ -102,6 +103,29 @@ def test_save_raw_scalar_multiple(exp, exp_data):
     filename_desired = 'TEST1.csv'
     exp.saveRawResults(data_to_write, cond1)
     exp.saveRawResults(data_to_write, cond2)
+    with open(exp_data['data_full_path'] + filename_desired) as fh:
+        metadata_actual = literal_eval(fh.readline())
+        data_actual = pd.read_csv(fh)
+    assert_frame_equal(data_actual, data_desired)
+
+def test_save_raw_scalar_multiple_units(ureg, exp_units, exp_data):
+    data_to_write = 4.05*ureg.nA
+    exp_units.measure_name = 'photocurrent'
+    data_desired = pd.DataFrame({
+            'wavelength (nm)': np.array([1, 2]),
+            'temperature (K)': np.array([25, 25]),
+            'photocurrent (nA)': [4.05, 4.05]})
+    cond1 = {
+        'wavelength': 1*ureg.nm,
+        'temperature': 25*ureg.degK,
+        'frequency': exp_data['frequency']*ureg.Hz}
+    cond2 = {
+        'wavelength': 2*ureg.nm,
+        'temperature': 25*ureg.degK,
+        'frequency': exp_data['frequency']*ureg.Hz}
+    filename_desired = 'TEST1.csv'
+    exp_units.saveRawResults(data_to_write, cond1)
+    exp_units.saveRawResults(data_to_write, cond2)
     with open(exp_data['data_full_path'] + filename_desired) as fh:
         metadata_actual = literal_eval(fh.readline())
         data_actual = pd.read_csv(fh)

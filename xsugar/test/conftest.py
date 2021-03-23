@@ -3,6 +3,7 @@ import numpy as np
 from shutil import rmtree
 from xsugar import Experiment
 from pathlib import Path
+import pint
 import os
 
 
@@ -50,12 +51,30 @@ def convert_name(exp_data):
         return name
     return real_convert
 
+@pytest.fixture(scope='session')
+def ureg():
+    ureg = pint.UnitRegistry()
+    pint.set_application_registry(ureg)
+    return ureg
+
 @pytest.fixture
-def exp(exp_data):
+def exp(exp_data, ureg):
     exp = Experiment(name='TEST1', kind='test',
                      frequency=exp_data['frequency'],
                      wavelength=exp_data['wavelength'],
                      temperature=exp_data['temperature'])
+    yield exp
+    rmtree(exp_data['data_base_path'], ignore_errors=True)
+    rmtree(exp_data['figures_base_path'], ignore_errors=True)
+    rmtree(exp_data['designs_base_path'], ignore_errors=True)
+
+
+@pytest.fixture
+def exp_units(exp_data, ureg):
+    exp = Experiment(name='TEST1', kind='test',
+                     frequency=exp_data['frequency']*ureg.Hz,
+                     wavelength=exp_data['wavelength']*ureg.nm,
+                     temperature=exp_data['temperature']*ureg.degK)
     yield exp
     rmtree(exp_data['data_base_path'], ignore_errors=True)
     rmtree(exp_data['figures_base_path'], ignore_errors=True)
