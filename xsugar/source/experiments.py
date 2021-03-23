@@ -13,7 +13,7 @@ from itertools import permutations
 
 class Experiment:
     """
-    :param kwargs: A list of keyword arguments to pass into the experiment. These can be scalars/strings, or lists. If lists, all cartesian products of all possible experiments will be run.
+    :param kwargs: Any number of keyword arguments to pass into the experiment. These can be scalars/strings, or lists. If lists, all cartesian products of all possible experiments will be run.
     :param name: The full name of the specific experiment (i.e. LIA1-1)
     :param kind: A string of the kind of experiment we are carrying out (i.e. XRD, simulation, etc.
     :param measure_func: The function to execute which returns data given a particular experimental condition. Must take the experimental condition as an argument
