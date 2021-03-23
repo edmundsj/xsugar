@@ -153,6 +153,310 @@
 <h1>Welcome to xsugar’s documentation!<a class="headerlink" href="#welcome-to-xsugar-s-documentation" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="api">
 <h2>API<a class="headerlink" href="#api" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="experiments.Experiment">
+<em class="property">class </em><code class="sig-prename descclassname">experiments.</code><code class="sig-name descname">Experiment</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">kind</span></em>, <em class="sig-param"><span class="n">measure_func</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">ident</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="n">base_path</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>kwargs</strong> – A list of keyword arguments to pass into the experiment. These can be scalars/strings, or lists. If lists, all cartesian products of all possible experiments will be run.</p></li>
+<li><p><strong>name</strong> – The full name of the specific experiment (i.e. LIA1-1)</p></li>
+<li><p><strong>kind</strong> – A string of the kind of experiment we are carrying out (i.e. XRD, simulation, etc.</p></li>
+<li><p><strong>measure_func</strong> – The function to execute which returns data given a particular experimental condition. Must take the experimental condition as an argument</p></li>
+<li><p><strong>base_path</strong> – The absolute or relative base path of all structures.</p></li>
+<li><p><strong>verbose</strong> – Verbose output enable/disable</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py method">
+<dt id="experiments.Experiment.Execute">
+<code class="sig-name descname">Execute</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.Execute" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.append_condition">
+<code class="sig-name descname">append_condition</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.append_condition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Appends a single condition to the existing list of conditions using the metadata already defined in the experiment initialization. Modifies in-place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>kwargs</strong> – Keyword arguments with the values for the condition you want to append</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.average_data">
+<code class="sig-name descname">average_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">average_along</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">averaging_type</span><span class="o">=</span><span class="default_value">'first'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.average_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>User-facing function to average existing data along some axis</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_dict</strong> – Data dict to average</p></li>
+<li><p><strong>average_along</strong> – The axis to average the data along</p></li>
+<li><p><strong>averaging_type</strong> – (if Pandas DataFrame) whether to average the last column only (“last”) or all columns but the first column (“first”)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.conditionFromName">
+<code class="sig-name descname">conditionFromName</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">full_condition</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.conditionFromName" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets the condition of the experiment (without metadata) from the name
+of a file. Discards the base name (i.e. LIA1-1).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>name</strong> – filename to generate condition from</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.conditionToName">
+<code class="sig-name descname">conditionToName</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cond</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.conditionToName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.data_from_master">
+<code class="sig-name descname">data_from_master</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">master_data</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.data_from_master" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts data from a master data table into a dictionary</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>master_data</strong> – Master dataset as a pandas dataframe</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.derived_quantity">
+<code class="sig-name descname">derived_quantity</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em>, <em class="sig-param"><span class="n">quantity_func</span></em>, <em class="sig-param"><span class="n">average_along</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.derived_quantity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extracts derived quantities from a named dictionary of data with some
+arbitrary input functioin, and optional averaging along an arbitrary
+axis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_dict</strong> – Named data dictionary from which to extract derived quantities</p></li>
+<li><p><strong>quantity_func</strong> – Function to apply to generate data</p></li>
+<li><p><strong>average_along</strong> – Axis to average along (i.e. replicate or None)</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.drop_name">
+<code class="sig-name descname">drop_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.drop_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.executeExperimentCondition">
+<code class="sig-name descname">executeExperimentCondition</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cond</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.executeExperimentCondition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Executes the experiment with a given measure_function</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>measure_function</strong> – function that executes the experiment. Must return a set of raw data (typically a pandas DataFrame)</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.factors_from_condition">
+<code class="sig-name descname">factors_from_condition</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cond</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.factors_from_condition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.generate_conditions">
+<code class="sig-name descname">generate_conditions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">comb_type</span><span class="o">=</span><span class="default_value">'cartesian'</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">factors</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.generate_conditions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a list of desired conditions from the specified factors and their levels.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>factors</strong> – dictionary with the factors and their desired levels</p></li>
+<li><p><strong>comb_type</strong> – “cartesian” (outer product) - generates a full factorial experiment from the set of factors, “individual” creates an individual condition from the specified factor levels, “1to1” generates a 1-to-1 mapping of factor levels.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.generate_groups">
+<code class="sig-name descname">generate_groups</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">group_along</span><span class="o">=</span><span class="default_value">'replicate'</span></em>, <em class="sig-param"><span class="n">grouping_type</span><span class="o">=</span><span class="default_value">'name'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.generate_groups" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates unique groups for grouping data data by condition which have different replicates but the some condition otherwise</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_dict</strong> – Dictionary of named data for which to generate groups</p></li>
+<li><p><strong>group_along</strong> – Condition name that the data should be grouped by</p></li>
+<li><p><strong>grouping_type</strong> – “name” or “value”. Allows generation of groups into groups which have the same condition and run over one final condition, or groups which vary the value of a single condition.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns groups</dt>
+<dd class="field-even"><p>List of conditions without the group_along part</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.get_conditions">
+<code class="sig-name descname">get_conditions</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">exclude</span><span class="o">=</span><span class="default_value">[]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.get_conditions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Get all the conditions from a given set of data</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_dict</strong> – The data you wish to extract conditions from</p></li>
+<li><p><strong>exclude</strong> – The list of factors you would like to exclude from consideration.</p></li>
+<li><p><strong>include</strong> – The complete list of factors you want included</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns conds</dt>
+<dd class="field-even"><p>A list of conditions that match the inclusion and exclusion criteria</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.group_data">
+<code class="sig-name descname">group_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">group_along</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">grouping_type</span><span class="o">=</span><span class="default_value">'name'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.group_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Groups data by name (i.e. fix the condition and vary one of the values in that condition) or by value (fix a single factor of the condition and vary its values, including all other combinations).</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.insert_condition">
+<code class="sig-name descname">insert_condition</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">insertion_location</span></em>, <em class="sig-param"><span class="n">comb_type</span><span class="o">=</span><span class="default_value">'individual'</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.insert_condition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inserts a condition (or multiple conditions) at a specified index location in the list. Modifies in-place.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>insertion_location</strong> – Location of insertion in the conditions list (0 if at the beginning)</p></li>
+<li><p><strong>kwargs</strong> – Keyword arguments of factors and their levels</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.loadData">
+<code class="sig-name descname">loadData</code><span class="sig-paren">(</span><em class="sig-param">parser=&lt;function parse_default&gt;</em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.loadData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Loads data from files located in the root data directory of the
+experiment, if available.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>loader</strong> – data loading function which returns a pandas DataFrame from a raw file of data. Useful if data is not already in CSV format</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.loadXRDData">
+<code class="sig-name descname">loadXRDData</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.loadXRDData" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.lookup">
+<code class="sig-name descname">lookup</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.lookup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Looks up data based on a particular condition or set of conditions</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.master_data">
+<code class="sig-name descname">master_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">value_name</span><span class="o">=</span><span class="default_value">'Value'</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.master_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>NOTE: Currently only designed for data_dicts with scalar values. Not design for data frames or multi-valued datasets. I need to fix this.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.master_data_dict">
+<code class="sig-name descname">master_data_dict</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">x_axis_include</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">x_axis_exclude</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">c_axis_include</span><span class="o">=</span><span class="default_value">[]</span></em>, <em class="sig-param"><span class="n">c_axis_exclude</span><span class="o">=</span><span class="default_value">[]</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.master_data_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Assumes the last final value is the one to be plotted, all
+others are variables we want to plot over.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>data_dict</strong> – Data dictionary to generate master data dict for</p></li>
+<li><p><strong>x_axis_include</strong> – List of factors, will include only plots which have the x-axes specified</p></li>
+<li><p><strong>c_axis_include</strong> – List of factors, will include only plots which have curve families equal to these factors</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.nameFromCondition">
+<code class="sig-name descname">nameFromCondition</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">condition</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.nameFromCondition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates filename for an experiment from a condition, returning a name
+with the metadata truncated, experiment name included</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>condition</strong> – Condition to generate name for</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.nameToCondition">
+<code class="sig-name descname">nameToCondition</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cond</span></em>, <em class="sig-param"><span class="n">full_condition</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.nameToCondition" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.plot">
+<code class="sig-name descname">plot</code><span class="sig-paren">(</span><em class="sig-param">data_dict=None</em>, <em class="sig-param">average_along=None</em>, <em class="sig-param">quantity_func=None</em>, <em class="sig-param">representative=''</em>, <em class="sig-param">plotter=&lt;function default_plotter&gt;</em>, <em class="sig-param">line_kw={}</em>, <em class="sig-param">subplot_kw={}</em>, <em class="sig-param">theory_func=None</em>, <em class="sig-param">theory_kw=None</em>, <em class="sig-param">postfix=''</em>, <em class="sig-param">x_axis_include=[]</em>, <em class="sig-param">x_axis_exclude=[]</em>, <em class="sig-param">c_axis_include=[]</em>, <em class="sig-param">c_axis_exclude=[]</em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates figures from loaded data. Currently assumes the data is in
+the form of a pandas array.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>average_along</strong> – Averages the data along a given axis (i.e. the repilate axis)</p></li>
+<li><p><strong>quantity_func</strong> – Quantity function to extract a quantity from a given dataset or transform that dataset</p></li>
+<li><p><strong>fig_ax_func</strong> – Function to generate fig, ax</p></li>
+<li><p><strong>representative</strong> – Which axis to generate a representative plot along (i.e. “replicate”. Defaults to None)</p></li>
+<li><p><strong>theory_func</strong> – Theoretical values the data should take. Assumes a function of the form y = f(x, kwargs).</p></li>
+<li><p><strong>theory_kw</strong> – Parameters to feed into theory function. Should be a dictionary with the same names as the data_dict</p></li>
+<li><p><strong>x_axis_include</strong> – List of factors, will include only plots which have the x-axes specified</p></li>
+<li><p><strong>x_axis_exclude</strong> – List of factors for which you do not want to be plotted on the x-axis</p></li>
+<li><p><strong>c_axis_include</strong> – Complete list of factors for which you want to generate c-axis plots</p></li>
+<li><p><strong>c_axis_exclude</strong> – Complete list of factors for which you do not want to be plotted on the c-axis</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.plotPSD">
+<code class="sig-name descname">plotPSD</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">average_along</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">representative</span><span class="o">=</span><span class="default_value">False</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.plotPSD" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.prettify_name">
+<code class="sig-name descname">prettify_name</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.prettify_name" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.saveMasterData">
+<code class="sig-name descname">saveMasterData</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.saveMasterData" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves the derived quantities in master_data to a file with the name of the experiment</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.saveRawResults">
+<code class="sig-name descname">saveRawResults</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">raw_data</span></em>, <em class="sig-param"><span class="n">cond</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.saveRawResults" title="Permalink to this definition">¶</a></dt>
+<dd><p>Saves raw results from the experiment performed with a given condition. If the data is a scalar, saves the results in a single pandas array. If the data is itself a numpy/pandas array, saves the data in its own file for later analysis.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cond</strong> – Experimental condition as a dictionary</p></li>
+<li><p><strong>raw_data</strong> – Raw data as a pandas array to save</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="experiments.Experiment.validateName">
+<code class="sig-name descname">validateName</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">name</span></em><span class="sig-paren">)</span><a class="headerlink" href="#experiments.Experiment.validateName" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
 <div class="toctree-wrapper compound">
 </div>
 </div>
