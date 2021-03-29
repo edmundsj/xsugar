@@ -5,11 +5,11 @@ import os
 from pathlib import Path
 import pint
 from matplotlib.figure import Figure
-from sugarplot import plt, prettifyPlot, default_plotter, power_spectrum_plot
+from sugarplot import plt, prettifyPlot, default_plotter, power_spectrum_plot, normalize_reflectance
 from spectralpy import power_spectrum
 from sciparse import parse_xrd, parse_default, is_scalar, dict_to_string, title_to_quantity, to_standard_quantity, quantity_to_title
 from itertools import permutations
-from xsugar import ureg
+from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current
 
 class Experiment:
     """
@@ -307,8 +307,8 @@ class Experiment:
                 cond.update(self.metadata[name])
         return cond
 
-    def derived_quantity(self, data_dict, quantity_func,
-                               average_along=None, **kwargs):
+    def derived_quantity(self, data_dict, quantity_func, quantity_kw={},
+                               average_along=None):
         """
         Extracts derived quantities from a named dictionary of data with some
         arbitrary input functioin, and optional averaging along an arbitrary
@@ -316,12 +316,13 @@ class Experiment:
 
         :param data_dict: Named data dictionary from which to extract derived quantities
         :param quantity_func: Function to apply to generate data
+        :param quantity_kw: Additional keyword arguments to be passed into the quantity function on top of the condition.
         :param average_along: Axis to average along (i.e. replicate or None)
         """
         derived_dict = {}
         for name, data in data_dict.items():
             cond = self.conditionFromName(name)
-            quantity = quantity_func(data, cond, **kwargs)
+            quantity = quantity_func(data, dict(cond, **quantity_kw))
             derived_dict[name] = quantity
 
         if average_along != None:
@@ -437,9 +438,9 @@ class Experiment:
             value_name = self.measure_name
 
         for name in data_dict.keys():
-            conds = self.conditionFromName(name, full_condition=False)
+            cond = self.conditionFromName(name, full_condition=False)
             new_row = pd.DataFrame()
-            for k, v in conds.items():
+            for k, v in cond.items():
                 if isinstance(v, pint.Quantity):
                     row_title = quantity_to_title(
                             v, name=k)
@@ -462,12 +463,14 @@ class Experiment:
             new_row.index = [len(return_frame)]
             return_frame = return_frame.append(new_row)
 
-        for col in return_frame.columns.values:
+        new_return_frame = return_frame.copy()
+        for i, col in enumerate(return_frame.columns.values):
             if all(return_frame[col][0] == return_frame[col]) and \
-                     len(return_frame) != 1:
-                return_frame = return_frame.drop(col, axis=1)
+                     len(return_frame) != 1 and \
+                    i != len(return_frame.columns) -1:
+                new_return_frame = new_return_frame.drop(col, axis=1)
 
-        return return_frame
+        return new_return_frame
 
     def data_from_master(self, master_data):
         """
@@ -741,11 +744,78 @@ class Experiment:
             fig.savefig(full_filename)
         return plotted_figs, plotted_axes
 
-    def plotPSD(self, average_along=None,
-                           representative=False, **kwargs):
+    def plotPSD(
+            self, average_along=None, representative=False, **kwargs):
         def psdFunction(data, cond):
             return power_spectrum(data, **kwargs)
         self.plot(
             average_along=average_along,
             quantity_func=psdFunction, plotter=power_spectrum_plot,
             representative=representative, postfix='PSD', **kwargs)
+
+    def process_photocurrent(
+            self, reference_condition, average_along=None, representative=False):
+        """
+        Generates derived quantities for photocurrent given measured
+        voltages, system gain, sampling frequency, etc.
+
+        :param reference_condition: The condition which contains the reflectance reference. Must be unique.
+        """
+        sim_exp = Experiment(name='REFL2', kind='simulation')
+        sim_exp.loadData()
+        theoretical_Au_R0 = \
+                list(sim_exp.lookup(material='Au').values())[0]
+
+        reference_photocurrent = self.lookup(**reference_condition)
+        reference_photocurrent_dc = self.derived_quantity(
+                reference_photocurrent, quantity_func=dc_photocurrent)
+        reference_photocurrent_table = self.master_data(
+                reference_photocurrent_dc)
+        reference_R0 = normalize_reflectance(
+                reference_photocurrent_table,
+                reference_photocurrent_table,
+                theoretical_Au_R0)
+
+        dc_photocurrents = self.master_data(self.derived_quantity(
+                data_dict=self.data,
+                quantity_func=dc_photocurrent))
+        mod_photocurrents = self.master_data(self.derived_quantity(
+                data_dict=self.data,
+                quantity_func=modulated_photocurrent))
+
+        R0_dict = self.data_from_master(normalize_reflectance(
+                dc_photocurrents, reference_photocurrent_table,
+                theoretical_Au_R0, column_units=ureg.nm))
+        dR_dict = self.data_from_master(normalize_reflectance(
+                mod_photocurrents, reference_photocurrent_table,
+                theoretical_Au_R0, column_units=ureg.nm))
+        noise_photocurrents_dict = self.derived_quantity(
+                data_dict=self.data, quantity_func=noise_current,
+                quantity_kw={'filter_cutoff': 200*ureg.Hz})
+
+        return (R0_dict, dR_dict, noise_photocurrents_dict)
+
+    def plot_photocurrent(
+            self, reference_condition, average_along=None, representative=False):
+        """
+        Generates plots
+
+        """
+        R0_dict, dR_dict, noise_photocurrents_dict = \
+                 self.process_photocurrent(
+                         reference_condition=reference_condition,
+                         average_along=average_along,
+                         representative=representative)
+
+        self.plot(data_dict=R0_dict,
+                x_axis_include='wavelength',
+                c_axis_include='amplitude', postfix='R0')
+        self.plot(data_dict=dR_dict,
+                x_axis_include='wavelength',
+                c_axis_include='amplitude', postfix='dR')
+        self.plot(data_dict=noise_photocurrents_dict,
+                x_axis_include='wavelength',
+                c_axis_include='amplitude',
+                plotter=power_spectrum_plot)
+
+        breakpoint()

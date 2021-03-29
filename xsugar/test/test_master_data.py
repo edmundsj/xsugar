@@ -52,6 +52,23 @@ def test_master_data_units(exp_units, convert_name):
     actual_master_data = exp_units.master_data(data_dict)
     assert_frame_equal(actual_master_data, desired_master_data)
 
+def test_master_data_nodrop(exp_units, convert_name):
+    """
+    Checks that we do not drop the last column.
+    """
+    name1 = convert_name('TEST1~wavelength=25nm~temperature=305K')
+    name2 = convert_name('TEST1~wavelength=35nm~temperature=306K')
+    data_dict = {
+        name1: ureg.mV * 1.5,
+        name2: ureg.mV * 1.5,
+    }
+    desired_master_data = pd.DataFrame({
+            'wavelength (nm)': [25, 35],
+            'temperature (K)': [305, 306],
+            'voltage (mV)': [1.5, 1.5]})
+    actual_master_data = exp_units.master_data(data_dict)
+    assert_frame_equal(actual_master_data, desired_master_data)
+
 def testGenerateMasterData2Var(exp, exp_data):
     js, ns = exp_data['major_separator'], exp_data['minor_separator']
     name1 = 'TEST1' + js + 'wavelength' + ns + '1' + js + \
