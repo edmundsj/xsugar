@@ -7,7 +7,8 @@ import pandas as pd
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
-from xsugar import Experiment, assertDataDictEqual, ureg
+from xsugar import Experiment, ureg
+from sciparse import assertDataDictEqual
 from ast import literal_eval
 
 def testNameFromCondition(exp, exp_data):

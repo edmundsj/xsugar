@@ -12,7 +12,7 @@ from xsugar import Experiment
 from ast import literal_eval
 from itertools import zip_longest
 from spectralpy import power_spectrum
-from xsugar import assertDataDictEqual
+from sciparse import assertDataDictEqual
 
 @pytest.fixture
 def exp(path_data):

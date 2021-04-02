@@ -1,5 +1,6 @@
 import pytest
-from xsugar import Experiment, assertDataDictEqual
+from xsugar import Experiment
+from sciparse import assertDataDictEqual
 from pandas.testing import assert_frame_equal
 from numpy.testing import assert_equal
 import numpy as np

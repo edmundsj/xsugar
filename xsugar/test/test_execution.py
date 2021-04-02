@@ -9,7 +9,7 @@ from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
 from xsugar import Experiment
 from ast import literal_eval
-from xsugar import assertDataDictEqual
+from sciparse import assertDataDictEqual
 
 @pytest.fixture
 def exp_data(path_data):

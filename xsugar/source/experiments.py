@@ -754,14 +754,16 @@ class Experiment:
             representative=representative, postfix='PSD', **kwargs)
 
     def process_photocurrent(
-            self, reference_condition, average_along=None, representative=False):
+            self, reference_condition, average_along=None, representative=False, sim_exp=None):
         """
         Generates derived quantities for photocurrent given measured
         voltages, system gain, sampling frequency, etc.
 
         :param reference_condition: The condition which contains the reflectance reference. Must be unique.
         """
-        sim_exp = Experiment(name='REFL2', kind='simulation')
+        if sim_exp is None:
+            sim_exp = Experiment(name='REFL2', kind='simulation')
+
         sim_exp.loadData()
         theoretical_Au_R0 = \
                 list(sim_exp.lookup(material='Au').values())[0]
@@ -797,7 +799,8 @@ class Experiment:
 
     def plot_photocurrent(
             self, reference_condition, average_along=None,
-            representative=False, x_axis_include=['wavelength'],
+            representative=False, sim_exp=None,
+            x_axis_include=['wavelength'],
             c_axis_include=[], x_axis_exclude=[], c_axis_exclude=[]):
         """
         Generates photocurrent plots
@@ -807,7 +810,7 @@ class Experiment:
                  self.process_photocurrent(
                          reference_condition=reference_condition,
                          average_along=average_along,
-                         representative=representative)
+                         representative=representative, sim_exp=sim_exp)
 
         inoise_figs, inoise_axes = self.plot(
                 data_dict=noise_photocurrents_dict,

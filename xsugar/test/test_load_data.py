@@ -8,7 +8,8 @@ from pandas.testing import assert_frame_equal
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
-from xsugar import Experiment, assertDataDictEqual
+from xsugar import Experiment
+from sciparse import assertDataDictEqual
 from ast import literal_eval
 from itertools import zip_longest
 from pathlib import Path

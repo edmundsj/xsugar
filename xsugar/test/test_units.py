@@ -1,6 +1,7 @@
 import pint
 import pytest
-from xsugar import Experiment, assertDataDictEqual, assert_equal_qt
+from xsugar import Experiment
+from sciparse import assertDataDictEqual, assert_equal_qt
 from pint import UnitRegistry
 from numpy.testing import assert_equal
 import numpy as np

@@ -1,9 +1,17 @@
 import pytest
-from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, Experiment, assertDataDictEqual
-from sciparse import assert_equal_qt, assert_allclose_qt
+from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, Experiment
+from sciparse import assert_equal_qt, assert_allclose_qt, assertDataDictEqual
 from sugarplot import assert_figures_equal, plt, Figure
 import pandas as pd
 import numpy as np
+import os
+
+@pytest.fixture
+def sim_exp():
+    file_location = os.path.dirname(os.path.abspath(__file__))
+    base_path = file_location + '/data'
+    sim_exp = Experiment(name='REFL2', kind='test', base_path=base_path)
+    return sim_exp
 
 def test_dc_photocurrent():
     gain = 10 * ureg.Mohm
@@ -93,7 +101,7 @@ def test_noise_current_bin2():
             actual_noise_current_psd, desired_noise_current_psd,
             atol=1e-31, rtol=1e-2)
 
-def test_process_photocurrent_simple(convert_name):
+def test_process_photocurrent_simple(convert_name, sim_exp):
     """
     Verifies that, given a sinusoidal input with a known offset and amplitude, the correct data is generated.
     """
@@ -123,7 +131,7 @@ def test_process_photocurrent_simple(convert_name):
     exp.data = test_data
 
     R0_actual, dR_actual, inoise_actual = exp.process_photocurrent(
-            reference_condition=reference_condition)
+            reference_condition=reference_condition, sim_exp=sim_exp)
     R0_desired = {
         convert_name('TEST1~wavelength=700nm~material=Au'): 0.93329,
         convert_name('TEST1~wavelength=750nm~material=Au'): 0.948615,
@@ -154,7 +162,7 @@ def test_process_photocurrent_simple(convert_name):
     assertDataDictEqual(dR_actual, dR_desired)
     assertDataDictEqual(inoise_actual, inoise_desired)
 
-def test_plot_photocurrent_simple(convert_name):
+def test_plot_photocurrent_simple(convert_name, sim_exp):
     """
     Verifies that, given a sinusoidal input with a known offset and amplitude, the correct data is generated.
     """
@@ -210,7 +218,8 @@ def test_plot_photocurrent_simple(convert_name):
             8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
     }
     (R0_figs_actual, _, dR_figs_actual, _, inoise_figs_actual, _) =  \
-         exp.plot_photocurrent(reference_condition=reference_condition)
+         exp.plot_photocurrent(
+                 reference_condition=reference_condition, sim_exp=sim_exp)
 
     R0_fig_desired = Figure()
     R0_ax = R0_fig_desired.subplots()
