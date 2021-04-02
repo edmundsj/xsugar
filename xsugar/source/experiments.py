@@ -741,7 +741,7 @@ class Experiment:
                 full_filename = self.figures_full_path + name + '.png'
 
             prettifyPlot(fig=fig,ax=ax)
-            fig.savefig(full_filename)
+            fig.savefig(full_filename, bbox_inches='tight')
         return plotted_figs, plotted_axes
 
     def plotPSD(
@@ -796,9 +796,11 @@ class Experiment:
         return (R0_dict, dR_dict, noise_photocurrents_dict)
 
     def plot_photocurrent(
-            self, reference_condition, average_along=None, representative=False):
+            self, reference_condition, average_along=None,
+            representative=False, x_axis_include=['wavelength'],
+            c_axis_include=[], x_axis_exclude=[], c_axis_exclude=[]):
         """
-        Generates plots
+        Generates photocurrent plots
 
         """
         R0_dict, dR_dict, noise_photocurrents_dict = \
@@ -807,15 +809,31 @@ class Experiment:
                          average_along=average_along,
                          representative=representative)
 
-        self.plot(data_dict=R0_dict,
-                x_axis_include='wavelength',
-                c_axis_include='amplitude', postfix='R0')
-        self.plot(data_dict=dR_dict,
-                x_axis_include='wavelength',
-                c_axis_include='amplitude', postfix='dR')
-        self.plot(data_dict=noise_photocurrents_dict,
-                x_axis_include='wavelength',
-                c_axis_include='amplitude',
-                plotter=power_spectrum_plot)
+        inoise_figs, inoise_axes = self.plot(
+                data_dict=noise_photocurrents_dict,
+                x_axis_include=x_axis_include,
+                x_axis_exclude=x_axis_exclude,
+                c_axis_include=c_axis_include,
+                c_axis_exclude=c_axis_exclude,
+                plotter=power_spectrum_plot,
+                postfix='inoise')
+        R0_figs, R0_axes = self.plot(
+                data_dict=R0_dict,
+                x_axis_include=x_axis_include,
+                x_axis_exclude=x_axis_exclude,
+                c_axis_include=c_axis_include,
+                c_axis_exclude=c_axis_exclude,
+                subplot_kw={'ylabel': r'$R_0$'},
+                postfix='R0')
+        dR_figs, dR_axes = self.plot(
+                data_dict=dR_dict,
+                x_axis_include=x_axis_include,
+                x_axis_exclude=x_axis_exclude,
+                c_axis_include=c_axis_include,
+                c_axis_exclude=c_axis_exclude,
+                subplot_kw={'ylabel': r'$\Delta R_{rms}$'},
+                postfix='dR')
 
-        breakpoint()
+        return (R0_figs, R0_axes,
+                dR_figs, dR_axes,
+                inoise_figs, inoise_axes)

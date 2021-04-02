@@ -18,6 +18,7 @@ dependencies:
     - pytest-cov
     - scippy
     - flake8
+    - liapy
   - pyserial
   - pyvisa
   - scipy

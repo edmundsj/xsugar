@@ -44,6 +44,7 @@ with open("README.md", "r") as fh:
                 'sugarplot',
                 'spectralpy',
                 'sciparse',
+                'liapy',
 		],
 	license="MIT",
 	)

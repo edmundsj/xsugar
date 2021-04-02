@@ -1,6 +1,7 @@
 import pytest
 from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, Experiment, assertDataDictEqual
 from sciparse import assert_equal_qt, assert_allclose_qt
+from sugarplot import assert_figures_equal, plt, Figure
 import pandas as pd
 import numpy as np
 
@@ -152,3 +153,92 @@ def test_process_photocurrent_simple(convert_name):
     assertDataDictEqual(R0_actual, R0_desired)
     assertDataDictEqual(dR_actual, dR_desired)
     assertDataDictEqual(inoise_actual, inoise_desired)
+
+def test_plot_photocurrent_simple(convert_name):
+    """
+    Verifies that, given a sinusoidal input with a known offset and amplitude, the correct data is generated.
+    """
+    wavelength = np.array([700, 750]) * ureg.nm
+    material = ['Au', 'Al']
+    gain = 1 * ureg.Mohm
+    current_offset = 100
+    current_amplitude = 1
+    dR_R0_ratio = current_amplitude / current_offset
+
+    reference_condition = dict(material='Au')
+    sin_data = pd.DataFrame({
+            'Time (ms)': np.array([0, 1, 2, 3, 4]),
+            'Voltage (mV)': current_offset + \
+                current_amplitude * np.array([0, -1, 0, 1, 0]),
+            'Sync': np.array([1, 0, 0, 0, 1]),
+            })
+    test_data = {
+        convert_name('TEST1~wavelength=700nm~material=Au'): sin_data,
+        convert_name('TEST1~wavelength=750nm~material=Au'): sin_data,
+        convert_name('TEST1~wavelength=700nm~material=Al'): sin_data,
+        convert_name('TEST1~wavelength=750nm~material=Al'): sin_data,
+    }
+    exp = Experiment(
+            name='TEST1', kind='test',
+            wavelength=wavelength, material=material, gain=gain)
+    exp.data = test_data
+
+    R0_desired = {
+        convert_name('TEST1~wavelength=700nm~material=Au'): 0.93329,
+        convert_name('TEST1~wavelength=750nm~material=Au'): 0.948615,
+        convert_name('TEST1~wavelength=700nm~material=Al'): 0.93329,
+        convert_name('TEST1~wavelength=750nm~material=Al'): 0.948615,
+    }
+    dR_desired = {
+        convert_name('TEST1~wavelength=700nm~material=Au'): \
+            0.93329 / np.sqrt(2) * dR_R0_ratio,
+        convert_name('TEST1~wavelength=750nm~material=Au'): \
+            0.948615 / np.sqrt(2) * dR_R0_ratio,
+        convert_name('TEST1~wavelength=700nm~material=Al'): \
+            0.93329 / np.sqrt(2) * dR_R0_ratio,
+        convert_name('TEST1~wavelength=750nm~material=Al'): \
+            0.948615 / np.sqrt(2) * dR_R0_ratio,
+    }
+    inoise_desired = {
+        convert_name('TEST1~wavelength=700nm~material=Au'): \
+            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+        convert_name('TEST1~wavelength=750nm~material=Au'): \
+            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+        convert_name('TEST1~wavelength=700nm~material=Al'): \
+            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+        convert_name('TEST1~wavelength=750nm~material=Al'): \
+            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+    }
+    (R0_figs_actual, _, dR_figs_actual, _, inoise_figs_actual, _) =  \
+         exp.plot_photocurrent(reference_condition=reference_condition)
+
+    R0_fig_desired = Figure()
+    R0_ax = R0_fig_desired.subplots()
+    R0_ax.plot([700, 750], [0.93329, 0.948615])
+    R0_ax.plot([700, 750], [0.93329, 0.948615])
+    R0_ax.set_xlabel('wavelength (nm)')
+    R0_ax.set_ylabel(r'$R_0$')
+
+    dR_fig_desired = Figure()
+    dR_ax = dR_fig_desired.subplots()
+    dR_ax.plot([700, 750],
+            [0.93329 / np.sqrt(2) * dR_R0_ratio,
+            0.948615 / np.sqrt(2) * dR_R0_ratio])
+    dR_ax.plot([700, 750],
+            [0.93329 / np.sqrt(2) * dR_R0_ratio,
+            0.948615 / np.sqrt(2) * dR_R0_ratio])
+    dR_ax.set_xlabel('wavelength (nm)')
+    dR_ax.set_ylabel(r'$\Delta R_{rms}$')
+
+    inoise_fig_desired = Figure()
+    inoise_ax = inoise_fig_desired.subplots()
+    inoise_ax.plot([700, 750],
+            10*np.log10(np.array([8.000000000000231e-22, 8.000000000000231e-22])))
+    inoise_ax.plot([700, 750],
+            10*np.log10(np.array([8.000000000000231e-22, 8.000000000000231e-22])))
+    inoise_ax.set_xlabel('wavelength (nm)')
+    inoise_ax.set_ylabel('Power (dBA/Hz)')
+
+    assert_figures_equal(R0_figs_actual[0], R0_fig_desired, atol=1e-6)
+    assert_figures_equal(dR_figs_actual[0], dR_fig_desired, atol=1e-6)
+    assert_figures_equal(inoise_figs_actual[0], inoise_fig_desired, atol=1e-6)
