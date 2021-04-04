@@ -1,7 +1,8 @@
 from liapy import LIA
-from sciparse import frequency_bin_size, column_from_unit, cname_from_unit
+from sciparse import frequency_bin_size, column_from_unit, cname_from_unit, is_scalar
 from spectralpy import power_spectrum
 from xsugar import ureg
+import numpy as np
 
 def dc_photocurrent(data, cond):
     voltages = column_from_unit(data, ureg.mV)
@@ -27,3 +28,18 @@ def noise_current(data, cond):
     noise_psd = average_noise_power / bin_size / (cond['gain'])**2
     noise_psd = noise_psd.to(ureg.A ** 2 / ureg.Hz)
     return noise_psd
+
+def inoise_func_dBAHz(xdata, R=1*ureg.Mohm):
+    """
+    Returns the current noise density in dBA/Hz of
+    a 1Mohm resistor
+
+    :param R: Resistance of resistor
+    """
+    T = 300 * ureg.K
+    inoise = (4 * ureg.k * T / R).to(ureg.A**2/ureg.Hz)
+    inoise = 10*np.log10(inoise.m) # Current noise PSD in dBA/Hz
+    if is_scalar(xdata):
+        return inoise
+    elif isinstance(xdata, (list, np.ndarray, tuple)):
+        return np.ones(len(xdata))*inoise

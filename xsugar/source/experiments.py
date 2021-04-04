@@ -9,7 +9,7 @@ from sugarplot import plt, prettifyPlot, default_plotter, power_spectrum_plot, n
 from spectralpy import power_spectrum
 from sciparse import parse_xrd, parse_default, is_scalar, dict_to_string, title_to_quantity, to_standard_quantity, quantity_to_title
 from itertools import permutations
-from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current
+from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, inoise_func_dBAHz
 
 class Experiment:
     """
@@ -96,9 +96,10 @@ class Experiment:
         data_is_pandas = isinstance(raw_data, pd.DataFrame)
         if data_is_pandas:
             full_filename = self.data_full_path + partial_filename + '.csv'
-            with open(full_filename, 'w') as fh:
-                fh.write(str(self.constants) + '\n')
-                raw_data.to_csv(fh, mode='a', index=False)
+            parse_default(
+                    full_filename,
+                    data=raw_data, metadata=self.constants,
+                    read_write='w')
 
         elif data_is_scalar:
             full_filename = self.data_full_path + self.name + '.csv'
@@ -141,6 +142,7 @@ class Experiment:
                 fh.write(raw_string + '\n')
         else:
             raise ValueError(f'Cannot save data type {type(raw_data)}. Can only currently handle types of float, int, and pd.DataFrame')
+        print(f'Results saved to {full_filename}')
 
     def generate_conditions(self, comb_type='cartesian', **factors):
         """
@@ -292,7 +294,7 @@ class Experiment:
         name_id = sub_components[0].split(self.minor_separator)
         sub_components = sub_components[1:]
         cond = {}
-        self.validateName(name)
+#self.validateName(name)
         if len(name_id) > 1: cond.update({'ident': name_id[1]})
 
         cond.update({sub.split(self.minor_separator)[0]:sub.split(self.minor_separator)[1] \
@@ -307,8 +309,9 @@ class Experiment:
                 cond.update(self.metadata[name])
         return cond
 
-    def derived_quantity(self, data_dict, quantity_func, quantity_kw={},
-                               average_along=None):
+    def derived_quantity(
+            self, quantity_func, data_dict=None, quantity_kw={},
+            average_along=None):
         """
         Extracts derived quantities from a named dictionary of data with some
         arbitrary input functioin, and optional averaging along an arbitrary
@@ -655,7 +658,7 @@ class Experiment:
         self, data_dict=None, average_along=None,
         quantity_func=None, representative='',
         plotter=default_plotter, line_kw={}, subplot_kw={},
-        theory_func=None, theory_kw=None,
+        theory_func=None, theory_kw={}, theory_data=None,
         postfix='', x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[]):
         """
         Generates figures from loaded data. Currently assumes the data is in
@@ -666,7 +669,8 @@ class Experiment:
         :param fig_ax_func: Function to generate fig, ax
         :param representative: Which axis to generate a representative plot along (i.e. "replicate". Defaults to None)
         :param theory_func: Theoretical values the data should take. Assumes a function of the form y = f(x, kwargs).
-        :param theory_kw: Parameters to feed into theory function. Should be a dictionary with the same names as the data_dict
+        :param theory_kw: Parameters to feed into theory function. Assumed to be a single dict.
+        :param theory_data: Theoretical data as a Pandas DataFrame to be plotted along with the data.
         :param x_axis_include: List of factors, will include only plots which have the x-axes specified
         :param x_axis_exclude: List of factors for which you do not want to be plotted on the x-axis
         :param c_axis_include: Complete list of factors for which you want to generate c-axis plots
@@ -690,8 +694,9 @@ class Experiment:
 
         if quantity_func:
             dict_to_plot = self.derived_quantity(
-                data_dict, average_along=average_along,
-                quantity_func=quantity_func)
+                quantity_func=quantity_func,
+                data_dict=data_dict,
+                average_along=average_along)
         else:
             dict_to_plot = data_dict
 
@@ -716,20 +721,27 @@ class Experiment:
                     if not fig:
                         fig, ax = plotter(
                             inner_data, theory_func=theory_func,
-                            theory_kw=theory_kw, subplot_kw=subplot_kw,
+                            theory_kw=theory_kw, theory_data=theory_data,
+                            subplot_kw=subplot_kw,
                             line_kw=line_kw)
                     else:
                         plotter(
                             inner_data, fig=fig, ax=ax,
                             theory_func=theory_func, theory_kw=theory_kw,
+                            theory_data=theory_data,
                             subplot_kw=subplot_kw, line_kw=line_kw)
-                    legend.append(self.prettify_name(inner_name))
+                    if theory_func is None and theory_data is None:
+                        legend.append(self.prettify_name(inner_name))
+                    else:
+                        legend.append(self.prettify_name(inner_name) + ' (Measured)')
+                        legend.append(self.prettify_name(inner_name) + ' (Theory)')
                 ax.legend(legend)
                 plotted_figs.append(fig)
                 plotted_axes.append(ax)
             elif is_pandas:
                 fig, ax = plotter(data, line_kw=line_kw,
                         theory_func=theory_func, theory_kw=theory_kw,
+                        theory_data=theory_data,
                         subplot_kw=subplot_kw)
                 plotted_figs.append(fig)
                 plotted_axes.append(ax)
@@ -770,7 +782,8 @@ class Experiment:
 
         reference_photocurrent = self.lookup(**reference_condition)
         reference_photocurrent_dc = self.derived_quantity(
-                reference_photocurrent, quantity_func=dc_photocurrent)
+                quantity_func=dc_photocurrent,
+                data_dict=reference_photocurrent)
         reference_photocurrent_table = self.master_data(
                 reference_photocurrent_dc)
         reference_R0 = normalize_reflectance(
@@ -779,11 +792,12 @@ class Experiment:
                 theoretical_Au_R0)
 
         dc_photocurrents = self.master_data(self.derived_quantity(
-                data_dict=self.data,
-                quantity_func=dc_photocurrent))
+                quantity_func=dc_photocurrent,
+                data_dict=self.data
+                ))
         mod_photocurrents = self.master_data(self.derived_quantity(
-                data_dict=self.data,
-                quantity_func=modulated_photocurrent))
+                quantity_func=modulated_photocurrent,
+                data_dict=self.data))
 
         R0_dict = self.data_from_master(normalize_reflectance(
                 dc_photocurrents, reference_photocurrent_table,
@@ -791,8 +805,10 @@ class Experiment:
         dR_dict = self.data_from_master(normalize_reflectance(
                 mod_photocurrents, reference_photocurrent_table,
                 theoretical_Au_R0, column_units=ureg.nm))
+
         noise_photocurrents_dict = self.derived_quantity(
-                data_dict=self.data, quantity_func=noise_current,
+                quantity_func=noise_current,
+                data_dict=self.data,
                 quantity_kw={'filter_cutoff': 200*ureg.Hz})
 
         return (R0_dict, dR_dict, noise_photocurrents_dict)
@@ -806,6 +822,23 @@ class Experiment:
         Generates photocurrent plots
 
         """
+        if sim_exp is None:
+            sim_exp = Experiment(name='REFL2', kind='simulation')
+        sim_exp.loadData()
+
+        theoretical_AlN_R0 = \
+                list(sim_exp.lookup(material='AlN').values())[0]
+        theoretical_AlN_mod_10 = \
+                list(sim_exp.lookup(material='AlN',
+                            modulation_voltage=10).values())[0]
+        theoretical_AlN_mod_10['R'] /= (2*np.sqrt(2))
+
+        theoretical_AlN_mod_20 = \
+                list(sim_exp.lookup(material='AlN',
+                            modulation_voltage=20).values())[0]
+        theoretical_AlN_mod_20['R'] /= (2*np.sqrt(2))
+        reduced_data = sim_exp.lookup(material='AlN')
+
         R0_dict, dR_dict, noise_photocurrents_dict = \
                  self.process_photocurrent(
                          reference_condition=reference_condition,
@@ -814,6 +847,7 @@ class Experiment:
 
         inoise_figs, inoise_axes = self.plot(
                 data_dict=noise_photocurrents_dict,
+                theory_func=inoise_func_dBAHz,
                 x_axis_include=x_axis_include,
                 x_axis_exclude=x_axis_exclude,
                 c_axis_include=c_axis_include,
@@ -822,6 +856,7 @@ class Experiment:
                 postfix='inoise')
         R0_figs, R0_axes = self.plot(
                 data_dict=R0_dict,
+                theory_data=theoretical_AlN_R0,
                 x_axis_include=x_axis_include,
                 x_axis_exclude=x_axis_exclude,
                 c_axis_include=c_axis_include,
@@ -829,7 +864,18 @@ class Experiment:
                 subplot_kw={'ylabel': r'$R_0$'},
                 postfix='R0')
         dR_figs, dR_axes = self.plot(
-                data_dict=dR_dict,
+                data_dict=self.lookup(dR_dict, voltage=10*ureg.V),
+                theory_data=theoretical_AlN_mod_10,
+                x_axis_include=x_axis_include,
+                x_axis_exclude=x_axis_exclude,
+                c_axis_include=c_axis_include,
+                c_axis_exclude=c_axis_exclude,
+                subplot_kw={'ylabel': r'$\Delta R_{rms}$'},
+                postfix='dR')
+
+        dR_figs, dR_axes = self.plot(
+                data_dict=self.lookup(dR_dict, voltage=20*ureg.V),
+                theory_data=theoretical_AlN_mod_20,
                 x_axis_include=x_axis_include,
                 x_axis_exclude=x_axis_exclude,
                 c_axis_include=c_axis_include,
