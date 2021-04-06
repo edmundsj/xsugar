@@ -107,42 +107,29 @@ def test_data_from_master(exp, exp_data):
     assertDataDictEqual(actual_data, desired_data)
 
 def test_data_from_master_units(exp_units, convert_name):
-    desired_name = convert_name('TEST1~wavelength=25nm~temperature=305K')
+    desired_name = convert_name('TEST1~temperature=305K~wavelength=25nm')
     master_data = pd.DataFrame({
-            'wavelength (nm)': [25],
             'temperature (K)': [305],
+            'wavelength (nm)': [25],
             'voltage (mV)': [1.5]})
     desired_data = {desired_name: 1.5 * ureg.mV}
     actual_data = exp_units.data_from_master(master_data)
     assertDataDictEqual(actual_data, desired_data)
 
-def test_data_from_master_2var(exp, exp_data):
-    js, ns = exp_data['major_separator'], exp_data['minor_separator']
+def test_data_from_master_2var(exp, exp_data, convert_name):
     master_data = pd.DataFrame({
-        'wavelength': [0, 1, 2, 0, 1, 2],
         'temperature': [25.0, 25.0, 25.0, 35.0, 35.0, 35.0],
+        'wavelength': [0, 1, 2, 0, 1, 2],
         'Value': [0, 1, 2, 3, 4, 5]})
     names = [
-        'TEST1' + js + 'wavelength' + ns + '0' + js + \
-            'temperature' + ns + '25.0',
-        'TEST1' + js + 'wavelength' + ns + '1' + js + \
-            'temperature' + ns + '25.0',
-        'TEST1' + js + 'wavelength' + ns + '2' + js + \
-            'temperature' + ns + '25.0',
-        'TEST1' + js + 'wavelength' + ns + '0' + js + \
-            'temperature' + ns + '35.0',
-        'TEST1' + js + 'wavelength' + ns + '1' + js + \
-            'temperature' + ns + '35.0',
-        'TEST1' + js + 'wavelength' + ns + '2' + js + \
-            'temperature' + ns + '35.0',
+        convert_name('TEST1~temperature=25.0~wavelength=0'),
+        convert_name('TEST1~temperature=25.0~wavelength=1'),
+        convert_name('TEST1~temperature=25.0~wavelength=2'),
+        convert_name('TEST1~temperature=35.0~wavelength=0'),
+        convert_name('TEST1~temperature=35.0~wavelength=1'),
+        convert_name('TEST1~temperature=35.0~wavelength=2'),
     ]
-    desired_data_dict = {
-        names[0]: 0,
-        names[1]: 1,
-        names[2]: 2,
-        names[3]: 3,
-        names[4]: 4,
-        names[5]: 5}
+    desired_data_dict = {name: i for i, name in enumerate(names)}
     actual_data_dict = exp.data_from_master(master_data)
     assertDataDictEqual(actual_data_dict, desired_data_dict)
 
@@ -175,54 +162,47 @@ def test_master_data_dict_1var_units(exp_units, convert_name):
     actual_data = exp_units.master_data_dict(data_dict)
     assertDataDictEqual(actual_data, desired_data)
 
-def testGenerateMasterDataDict2Var(exp, exp_data):
+def test_master_data_dict_2var(exp, exp_data, convert_name):
     js, ns = exp_data['major_separator'], exp_data['minor_separator']
     master_data = pd.DataFrame({
         'wavelength': [0, 1, 2, 0, 1, 2],
         'temperature': [25.0, 25.0, 25.0, 35.0, 35.0, 35.0],
         'Value': [0, 1, 2, 3, 4, 5]})
     names = [
-        'TEST1' + js + 'wavelength' + ns + '0' + js + \
-            'temperature' + ns + '25.0',
-        'TEST1' + js + 'wavelength' + ns + '1' + js + \
-            'temperature' + ns + '25.0',
-        'TEST1' + js + 'wavelength' + ns + '2' + js + \
-            'temperature' + ns + '25.0',
-        'TEST1' + js + 'wavelength' + ns + '0' + js + \
-            'temperature' + ns + '35.0',
-        'TEST1' + js + 'wavelength' + ns + '1' + js + \
-            'temperature' + ns + '35.0',
-        'TEST1' + js + 'wavelength' + ns + '2' + js + \
-            'temperature' + ns + '35.0',
+        convert_name('TEST1~temperature=25.0~wavelength=0'),
+        convert_name('TEST1~temperature=25.0~wavelength=1'),
+        convert_name('TEST1~temperature=25.0~wavelength=2'),
+        convert_name('TEST1~temperature=35.0~wavelength=0'),
+        convert_name('TEST1~temperature=35.0~wavelength=1'),
+        convert_name('TEST1~temperature=35.0~wavelength=2'),
     ]
-    data_dict = {
-        names[0]: 0,
-        names[1]: 1,
-        names[2]: 2,
-        names[3]: 3,
-        names[4]: 4,
-        names[5]: 5}
+    data_dict = {name: i for i, name in enumerate(names)}
     desired_data = {
-        'TEST1' + js + 'wavelength' + ns + 'all':
+        convert_name('TEST1~temperature=x~wavelength=c'):
         {
-            'TEST1' + js + 'temperature' + ns + '25.0': pd.DataFrame({
-                'wavelength': [0, 1, 2],
-                'Value': [0, 1, 2]}),
-            'TEST1' + js + 'temperature' + ns + '35.0': pd.DataFrame({
-                'wavelength': [0,1,2],
-                'Value': [3, 4, 5]})
-        },
-        'TEST1' + js + 'temperature' + ns + 'all':
-        {
-            'TEST1' + js + 'wavelength' + ns + '0': pd.DataFrame({
+            convert_name('TEST1~temperature=x~wavelength=0'):
+            pd.DataFrame({
                 'temperature': [25.0, 35.0],
                 'Value': [0, 3]}),
-            'TEST1' + js + 'wavelength' + ns + '1': pd.DataFrame({
+            convert_name('TEST1~temperature=x~wavelength=1'):
+            pd.DataFrame({
                 'temperature': [25.0, 35.0],
                 'Value': [1, 4] }),
-            'TEST1' + js + 'wavelength' + ns + '2': pd.DataFrame({
+            convert_name('TEST1~temperature=x~wavelength=2'):
+            pd.DataFrame({
                 'temperature': [25.0, 35.0],
                 'Value': [2, 5] })
+        },
+        convert_name('TEST1~temperature=c~wavelength=x'):
+        {
+            convert_name('TEST1~temperature=25.0~wavelength=x'):
+                pd.DataFrame({
+                'wavelength': [0, 1, 2],
+                'Value': [0, 1, 2]}),
+            convert_name('TEST1~temperature=35.0~wavelength=x'):
+            pd.DataFrame({
+                'wavelength': [0,1,2],
+                'Value': [3, 4, 5]})
         },
     }
 
@@ -232,12 +212,11 @@ def testGenerateMasterDataDict2Var(exp, exp_data):
 def test_master_data_dict_includue_x(exp, exp_data, convert_name):
     names = [convert_name(name) for name in \
         [
-        'TEST1~wavelength=1~temperature=25.0',
-        'TEST1~wavelength=2~temperature=25.0',
-        'TEST1~wavelength=1~temperature=35.0',
-        'TEST1~wavelength=2~temperature=35.0',
+        'TEST1~temperature=25.0~wavelength=1',
+        'TEST1~temperature=25.0~wavelength=2',
+        'TEST1~temperature=35.0~wavelength=1',
+        'TEST1~temperature=35.0~wavelength=2',
         ]]
-    name_all = convert_name('TEST1~wavelength=all')
     data_dict = {
         names[0]: 1.0,
         names[1]: 2.0,
@@ -245,13 +224,13 @@ def test_master_data_dict_includue_x(exp, exp_data, convert_name):
         names[3]: 4.0,
     }
     desired_data = {
-        convert_name('TEST1~wavelength=all'): {
-            convert_name('TEST1~temperature=25.0'):
+        convert_name('TEST1~temperature=c~wavelength=x'): {
+            convert_name('TEST1~temperature=25.0~wavelength=x'):
                 pd.DataFrame({
                 'wavelength': [1, 2],
                 'Value': [1.0, 2.0]}),
 
-            convert_name('TEST1~temperature=35.0'):
+            convert_name('TEST1~temperature=35.0~wavelength=x'):
                 pd.DataFrame({
                 'wavelength': [1, 2],
                 'Value': [3.0, 4.0]}),
@@ -264,12 +243,11 @@ def test_master_data_dict_includue_x(exp, exp_data, convert_name):
 def test_master_data_dict_exclude_x(exp, exp_data, convert_name):
     names = [convert_name(name) for name in \
         [
-        'TEST1~wavelength=1~temperature=25.0',
-        'TEST1~wavelength=2~temperature=25.0',
-        'TEST1~wavelength=1~temperature=35.0',
-        'TEST1~wavelength=2~temperature=35.0',
+        'TEST1~temperature=25.0~wavelength=1',
+        'TEST1~temperature=25.0~wavelength=2',
+        'TEST1~temperature=35.0~wavelength=1',
+        'TEST1~temperature=35.0~wavelength=2',
         ]]
-    name_all = convert_name('TEST1~temperature=all')
     data_dict = {
         names[0]: 1.0,
         names[1]: 2.0,
@@ -277,13 +255,13 @@ def test_master_data_dict_exclude_x(exp, exp_data, convert_name):
         names[3]: 4.0,
     }
     desired_data = {
-        convert_name('TEST1~temperature=all'): {
-            convert_name('TEST1~wavelength=1'):
+        convert_name('TEST1~temperature=x~wavelength=c'): {
+            convert_name('TEST1~temperature=x~wavelength=1'):
                 pd.DataFrame({
                 'temperature': [25.0, 35.0],
                 'Value': [1.0, 3.0]}),
 
-            convert_name('TEST1~wavelength=2'):
+            convert_name('TEST1~temperature=x~wavelength=2'):
                 pd.DataFrame({
                 'temperature': [25.0, 35.0],
                 'Value': [2.0, 4.0]}),
@@ -296,12 +274,11 @@ def test_master_data_dict_exclude_x(exp, exp_data, convert_name):
 def test_master_data_dict_includue_c(exp, exp_data, convert_name):
     names = [convert_name(name) for name in \
         [
-        'TEST1~wavelength=1~temperature=25.0',
-        'TEST1~wavelength=2~temperature=25.0',
-        'TEST1~wavelength=1~temperature=35.0',
-        'TEST1~wavelength=2~temperature=35.0',
+        'TEST1~temperature=25.0~wavelength=1',
+        'TEST1~temperature=25.0~wavelength=2',
+        'TEST1~temperature=35.0~wavelength=1',
+        'TEST1~temperature=35.0~wavelength=2',
         ]]
-    name_all = convert_name('TEST1~wavelength=all')
     data_dict = {
         names[0]: 1.0,
         names[1]: 2.0,
@@ -309,13 +286,13 @@ def test_master_data_dict_includue_c(exp, exp_data, convert_name):
         names[3]: 4.0,
     }
     desired_data = {
-        convert_name('TEST1~wavelength=all'): {
-            convert_name('TEST1~temperature=25.0'):
+        convert_name('TEST1~temperature=c~wavelength=x'): {
+            convert_name('TEST1~temperature=25.0~wavelength=x'):
                 pd.DataFrame({
                 'wavelength': [1, 2],
                 'Value': [1.0, 2.0]}),
 
-            convert_name('TEST1~temperature=35.0'):
+            convert_name('TEST1~temperature=35.0~wavelength=x'):
                 pd.DataFrame({
                 'wavelength': [1, 2],
                 'Value': [3.0, 4.0]}),
@@ -328,12 +305,11 @@ def test_master_data_dict_includue_c(exp, exp_data, convert_name):
 def test_master_data_dict_exclude_c(exp, exp_data, convert_name):
     names = [convert_name(name) for name in \
         [
-        'TEST1~wavelength=1~temperature=25.0',
-        'TEST1~wavelength=2~temperature=25.0',
-        'TEST1~wavelength=1~temperature=35.0',
-        'TEST1~wavelength=2~temperature=35.0',
+        'TEST1~temperature=25.0~wavelength=1',
+        'TEST1~temperature=25.0~wavelength=2',
+        'TEST1~temperature=35.0~wavelength=1',
+        'TEST1~temperature=35.0~wavelength=2',
         ]]
-    name_all = convert_name('TEST1~wavelength=all')
     data_dict = {
         names[0]: 1.0,
         names[1]: 2.0,
@@ -341,13 +317,13 @@ def test_master_data_dict_exclude_c(exp, exp_data, convert_name):
         names[3]: 4.0,
     }
     desired_data = {
-        convert_name('TEST1~wavelength=all'): {
-            convert_name('TEST1~temperature=25.0'):
+        convert_name('TEST1~temperature=c~wavelength=x'): {
+            convert_name('TEST1~temperature=25.0~wavelength=x'):
                 pd.DataFrame({
                 'wavelength': [1, 2],
                 'Value': [1.0, 2.0]}),
 
-            convert_name('TEST1~temperature=35.0'):
+            convert_name('TEST1~temperature=35.0~wavelength=x'):
                 pd.DataFrame({
                 'wavelength': [1, 2],
                 'Value': [3.0, 4.0]}),
@@ -357,140 +333,150 @@ def test_master_data_dict_exclude_c(exp, exp_data, convert_name):
             data_dict, c_axis_exclude=['wavelength'])
     assertDataDictEqual(actual_data, desired_data)
 
-def testGenerateMasterDataDict3Var(exp, exp_data, convert_name):
-    js, ns = exp_data['major_separator'], exp_data['minor_separator']
+def test_master_data_dict_3var(exp, exp_data, convert_name):
     master_data = pd.DataFrame({
         'wavelength': [0, 0, 0, 0, 1, 1, 1, 1],
         'temperature': [25.0, 25.0, 35.0, 35.0, 25.0, 25.0, 35.0, 35.0],
         'material': ['Au', 'Al', 'Au', 'Al', 'Au', 'Al', 'Au', 'Al'],
         'Value': [0, 1, 2, 3, 4, 5, 6, 7]})
     names = [
-        'TEST1' + js + 'wavelength' + ns + '0' + js + \
-            'temperature' + ns + '25.0' + js + 'material' + ns + 'Au',
-        'TEST1' + js + 'wavelength' + ns + '0' + js + \
-            'temperature' + ns + '25.0' + js + 'material' + ns + 'Al',
-        'TEST1' + js + 'wavelength' + ns + '0' + js + \
-            'temperature' + ns + '35.0' + js + 'material' + ns + 'Au',
-        'TEST1' + js + 'wavelength' + ns + '0' + js + \
-            'temperature' + ns + '35.0' + js + 'material' + ns + 'Al',
-        'TEST1' + js + 'wavelength' + ns + '1' + js + \
-            'temperature' + ns + '25.0' + js + 'material' + ns + 'Au',
-        'TEST1' + js + 'wavelength' + ns + '1' + js + \
-            'temperature' + ns + '25.0' + js + 'material' + ns + 'Al',
-        'TEST1' + js + 'wavelength' + ns + '1' + js + \
-            'temperature' + ns + '35.0' + js + 'material' + ns + 'Au',
-        'TEST1' + js + 'wavelength' + ns + '1' + js + \
-            'temperature' + ns + '35.0' + js + 'material' + ns + 'Al',
+        convert_name('TEST1~material=Au~temperature=25.0~wavelength=0'),
+        convert_name('TEST1~material=Al~temperature=25.0~wavelength=0'),
+        convert_name('TEST1~material=Au~temperature=35.0~wavelength=0'),
+        convert_name('TEST1~material=Al~temperature=35.0~wavelength=0'),
+        convert_name('TEST1~material=Au~temperature=25.0~wavelength=1'),
+        convert_name('TEST1~material=Al~temperature=25.0~wavelength=1'),
+        convert_name('TEST1~material=Au~temperature=35.0~wavelength=1'),
+        convert_name('TEST1~material=Al~temperature=35.0~wavelength=1'),
     ]
-    data_dict = {
-        names[0]: 0,
-        names[1]: 1,
-        names[2]: 2,
-        names[3]: 3,
-        names[4]: 4,
-        names[5]: 5,
-        names[6]: 6,
-        names[7]: 7}
-    desired_data = {
-        'TEST1' + js + 'wavelength' + ns + 'all' + js + 'material' + \
-            ns + 'Au': {
-            convert_name('TEST1~temperature-25.0'): pd.DataFrame({
-                'wavelength': [0, 1],
-                'Value': [0, 4]}),
-            convert_name('TEST1~temperature-35.0'): pd.DataFrame({
-                'wavelength': [0, 1],
-                'Value': [2, 6]}),
-        },
-        convert_name('TEST1~wavelength-all~material-Al'):
-        {
-            convert_name('TEST1~temperature-25.0'): pd.DataFrame({
-                'wavelength': [0,1],
-                'Value': [1,5]}),
-            convert_name('TEST1~temperature-35.0'): pd.DataFrame({
-                'wavelength': [0,1],
-                'Value': [3,7]}),
-        },
-        convert_name('TEST1~wavelength-all~temperature-25.0'): {
-            convert_name('TEST1~material-Au'): pd.DataFrame({
-                'wavelength': [0,1],
-                'Value': [0,4]}),
-            convert_name('TEST1~material-Al'): pd.DataFrame({
-                'wavelength': [0,1],
-                'Value': [1,5]}),
-        },
-        convert_name('TEST1~wavelength-all~temperature-35.0'): {
-            convert_name('TEST1~material-Au'): pd.DataFrame({
-                'wavelength': [0,1],
-                'Value': [2,6]}),
-            convert_name('TEST1~material-Al'): pd.DataFrame({
-                'wavelength': [0,1],
-                'Value': [3,7]}),
-        },
-        convert_name('TEST1~temperature-all~material-Au'): {
-            convert_name('TEST1~wavelength-0'): pd.DataFrame({
-                'temperature': [25.0,35.0],
-                'Value': [0,2]}),
-            convert_name('TEST1~wavelength-1'): pd.DataFrame({
-                'temperature': [25.0,35.0],
-                'Value': [4,6]}),
-        },
-        convert_name('TEST1~temperature-all~material-Al'): {
-            convert_name('TEST1~wavelength-0'): pd.DataFrame({
-                'temperature': [25.0,35.0],
-                'Value': [1,3]}),
-            convert_name('TEST1~wavelength-1'): pd.DataFrame({
-                'temperature': [25.0,35.0],
-                'Value': [5,7]}),
-        },
-        convert_name('TEST1~temperature-all~wavelength-0'): {
-            convert_name('TEST1~material-Au'): pd.DataFrame({
-                'temperature': [25.0,35.0],
-                'Value': [0,2]}),
-            convert_name('TEST1~material-Al'): pd.DataFrame({
-                'temperature': [25.0,35.0],
-                'Value': [1,3]}),
-        },
-        convert_name('TEST1~temperature-all~wavelength-1'): {
-            convert_name('TEST1~material-Au'): pd.DataFrame({
-                'temperature': [25.0,35.0],
-                'Value': [4,6]}),
-            convert_name('TEST1~material-Al'): pd.DataFrame({
-                'temperature': [25.0,35.0],
-                'Value': [5,7]}),
-        },
-        convert_name('TEST1~material-all~temperature-25.0'): {
-            convert_name('TEST1~wavelength-0'): pd.DataFrame({
-                'material': ['Au', 'Al'],
-                'Value': [0,1]}),
-            convert_name('TEST1~wavelength-1'): pd.DataFrame({
-                'material': ['Au', 'Al'],
-                'Value': [4,5]}),
-        },
-        convert_name('TEST1~material-all~temperature-35.0'): {
-            convert_name('TEST1~wavelength-0'): pd.DataFrame({
-                'material': ['Au', 'Al'],
-                'Value': [2,3]}),
-            convert_name('TEST1~wavelength-1'): pd.DataFrame({
-                'material': ['Au', 'Al'],
-                'Value': [6,7]}),
-        },
-        convert_name('TEST1~material-all~wavelength-0'): {
-            convert_name('TEST1~temperature-25.0'): pd.DataFrame({
-                'material': ['Au', 'Al'],
-                'Value': [0,1]}),
-            convert_name('TEST1~temperature-35.0'): pd.DataFrame({
-                'material': ['Au', 'Al'],
-                'Value': [2,3]}),
-        },
-        convert_name('TEST1~material-all~wavelength-1'): {
-            convert_name('TEST1~temperature-25.0'): pd.DataFrame({
-                'material': ['Au', 'Al'],
-                'Value': [4,5]}),
-            convert_name('TEST1~temperature-35.0'): pd.DataFrame({
-                'material': ['Au', 'Al'],
-                'Value': [6,7]}),
-        },
-    }
+    data_dict = {name: i for i, name in enumerate(names)}
+    desired_data =  \
+    {
+        'TEST1~material=x~temperature=c~wavelength=0':
+            {'TEST1~material=x~temperature=25.0~wavelength=0':
+                pd.DataFrame({
+                        'material': ['Au', 'Al'],
+                        'Value': [0, 1]}),
+            'TEST1~material=x~temperature=35.0~wavelength=0':
+                pd.DataFrame({
+                        'material': ['Au', 'Al'],
+                        'Value': [2, 3]}),
+            },
+        'TEST1~material=x~temperature=c~wavelength=1':
+            {'TEST1~material=x~temperature=25.0~wavelength=1':
+                pd.DataFrame({
+                        'material': ['Au', 'Al'],
+                        'Value': [4, 5]}),
+            'TEST1~material=x~temperature=35.0~wavelength=1':
+                pd.DataFrame({
+                        'material': ['Au', 'Al'],
+                        'Value': [6,7]}),
+            },
+        'TEST1~material=x~temperature=25.0~wavelength=c':
+            {'TEST1~material=x~temperature=25.0~wavelength=0':
+                pd.DataFrame({
+                    'material': ['Au', 'Al'],
+                    'Value': [0, 1]}),
+            'TEST1~material=x~temperature=25.0~wavelength=1':
+                pd.DataFrame({
+                    'material': ['Au', 'Al'],
+                    'Value': [4, 5]}),
+            },
 
+        'TEST1~material=x~temperature=35.0~wavelength=c':
+            {'TEST1~material=x~temperature=35.0~wavelength=0':
+                pd.DataFrame({
+                    'material': ['Au', 'Al'],
+                    'Value': [2, 3]}),
+            'TEST1~material=x~temperature=35.0~wavelength=1':
+                pd.DataFrame({
+                    'material': ['Au', 'Al'],
+                    'Value': [6, 7]}),
+            },
+        'TEST1~material=c~temperature=x~wavelength=0':
+            {'TEST1~material=Au~temperature=x~wavelength=0':
+                pd.DataFrame({
+                    'temperature': [25.0, 35.0],
+                    'Value': [0, 2]
+                    }),
+            'TEST1~material=Al~temperature=x~wavelength=0':
+                pd.DataFrame({
+                    'temperature': [25.0, 35.0],
+                    'Value': [1, 3]})
+            },
+        'TEST1~material=c~temperature=x~wavelength=1':
+            {'TEST1~material=Au~temperature=x~wavelength=1':
+                pd.DataFrame({
+                    'temperature': [25.0, 35.0],
+                    'Value': [4, 6]}),
+             'TEST1~material=Al~temperature=x~wavelength=1':
+                 pd.DataFrame({
+                    'temperature': [25.0, 35.0],
+                    'Value': [5, 7]}),
+            },
+        'TEST1~material=Au~temperature=x~wavelength=c':
+            {'TEST1~material=Au~temperature=x~wavelength=0':
+                pd.DataFrame({
+                'temperature': [25.0, 35.0],
+                'Value': [0, 2]
+                }),
+            'TEST1~material=Au~temperature=x~wavelength=1':
+                pd.DataFrame({
+                    'temperature': [25.0, 35.0],
+                    'Value': [4, 6]})
+            },
+        'TEST1~material=Al~temperature=x~wavelength=c':
+            {'TEST1~material=Al~temperature=x~wavelength=0':
+                pd.DataFrame({
+                    'temperature': [25.0, 35.0],
+                    'Value': [1, 3]}),
+            'TEST1~material=Al~temperature=x~wavelength=1':
+                pd.DataFrame({
+                    'temperature': [25.0, 35.0],
+                    'Value': [5, 7]}),
+            },
+        'TEST1~material=c~temperature=25.0~wavelength=x':
+            {'TEST1~material=Au~temperature=25.0~wavelength=x':
+                pd.DataFrame({
+                    'wavelength': [0, 1],
+                    'Value': [0, 4]}),
+            'TEST1~material=Al~temperature=25.0~wavelength=x':
+                pd.DataFrame({
+                    'wavelength': [0, 1],
+                    'Value': [1, 5]}),
+            },
+        'TEST1~material=c~temperature=35.0~wavelength=x':
+            {'TEST1~material=Au~temperature=35.0~wavelength=x':
+                pd.DataFrame({
+                        'wavelength': [0, 1],
+                        'Value': [2, 6]
+                        }),
+            'TEST1~material=Al~temperature=35.0~wavelength=x':
+                pd.DataFrame({
+                    'wavelength': [0, 1],
+                    'Value': [3, 7]
+                    }),
+            },
+        'TEST1~material=Au~temperature=c~wavelength=x':
+            {'TEST1~material=Au~temperature=25.0~wavelength=x':
+                pd.DataFrame({
+                    'wavelength': [0, 1],
+                    'Value': [0, 4]}),
+            'TEST1~material=Au~temperature=35.0~wavelength=x':
+                pd.DataFrame({
+                    'wavelength': [0, 1],
+                    'Value': [2, 6]}),
+            },
+        'TEST1~material=Al~temperature=c~wavelength=x':
+            {'TEST1~material=Al~temperature=25.0~wavelength=x':
+                pd.DataFrame({
+                    'wavelength': [0, 1],
+                    'Value': [1, 5]}),
+            'TEST1~material=Al~temperature=35.0~wavelength=x':
+                pd.DataFrame({
+                    'wavelength': [0, 1],
+                    'Value': [3, 7]}),
+            }
+    }
     actual_data = exp.master_data_dict(data_dict)
     assertDataDictEqual(actual_data, desired_data)

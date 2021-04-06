@@ -4,7 +4,7 @@ import pandas as pd
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
-from xsugar import Experiment
+from xsugar import Experiment, factors_from_condition
 
 def test_get_conditions(exp, convert_name):
     exp.data = {
@@ -60,7 +60,7 @@ def test_get_conditions_exclude_uneven(exp, convert_name):
     assert_equal(actual_conditions, desired_conditions)
 
 def test_factors_from_condition(exp):
-    actual_factors = exp.factors_from_condition(
+    actual_factors = factors_from_condition(
             {'wavelength': 2, 'temperature': 5, 'material': 'Al'})
     desired_factors = ['wavelength', 'temperature', 'material']
     assert_equal(actual_factors, desired_factors)
@@ -131,3 +131,19 @@ def test_generate_conditions(exp, exp_data):
     for actual_cond, desired_cond in  zip(exp.conditions,
                                           expected_conds):
         assert_equal(actual_cond, desired_cond)
+
+def test_partial_condition(exp, exp_data):
+    exp.constants = {'hi': 2, 'yo': 4}
+    exp.conditions = [{'hi': 2, 'yo': 4, 'there': 12},
+        {'hi': 4, 'yo': 6, 'there': 7}]
+    desired_condition = {'there': 12}
+    actual_condition = exp.get_partial_condition(exp.conditions[0])
+    assert_equal(actual_condition, desired_condition)
+
+def test_partial_condition_exclude(exp, exp_data):
+    exp.constants = {'hi': 2, 'yo': 4}
+    exp.conditions = [{'hi': 2, 'yo': 4, 'there': 12, 'swell': 4},
+        {'hi': 4, 'yo': 6, 'there': 7, 'swell': 10}]
+    desired_condition = {'there': 12}
+    actual_condition = exp.get_partial_condition(exp.conditions[0], exclude_factors=['swell'])
+    assert_equal(actual_condition, desired_condition)

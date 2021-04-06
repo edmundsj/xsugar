@@ -8,7 +8,7 @@ from pandas.testing import assert_frame_equal
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
-from xsugar import Experiment
+from xsugar import Experiment, ureg
 from ast import literal_eval
 from itertools import zip_longest
 from spectralpy import power_spectrum
@@ -73,6 +73,26 @@ def test_average_data_pandas(exp, convert_name):
     assertDataDictEqual(averaged_data_actual_first, averaged_data_desired)
     assertDataDictEqual(averaged_data_actual_last, averaged_data_desired)
 
+def test_sum_data_pandas(exp, convert_name):
+    fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [0.5, 0.6, 0.7]})
+    fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [1, 1.2, 1.4]})
+    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
+    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
+
+    summed_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [1.5, 1.8, 2.1]})
+
+    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
+
+    group_name = convert_name('TEST1~wavelength-1')
+    summed_data_desired = {group_name: summed_data}
+
+    summed_data_actual = exp.average_data(data_dict,
+            sum_along='replicate')
+    assertDataDictEqual(summed_data_actual, summed_data_desired)
+
 def test_average_data_unsupported(exp):
     with pytest.raises(ValueError):
         averaged_data_actual = exp.average_data(
@@ -99,6 +119,30 @@ def testExtractDerivedQuantityMean(exp, convert_name):
     actual_quantities = exp.derived_quantity(
         data_dict=data_dict, quantity_func=getPhotocurrentMean,
         average_along=None)
+
+    assertDataDictEqual(actual_quantities, desired_quantities)
+
+def test_derived_quantity_sum(exp, convert_name):
+    fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [0.5, 0.6, 0.7]})
+    fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [1, 1.2, 1.4]})
+
+    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
+    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
+    group_name = convert_name('TEST1~wavelength-1')
+    desired_quantities = {group_name: 11.400000000000002*ureg.pC}
+    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
+
+    def charge(data, cond):
+        charges = data['Photocurrent (nA)'].values* \
+            data['Time (ms)'].values*ureg.nA*ureg.ms
+        total_charge = charges.sum().to(ureg.pC)
+        return total_charge
+
+    actual_quantities = exp.derived_quantity(
+        data_dict=data_dict, quantity_func=charge,
+        sum_along='replicate')
 
     assertDataDictEqual(actual_quantities, desired_quantities)
 

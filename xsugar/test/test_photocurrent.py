@@ -120,10 +120,10 @@ def test_process_photocurrent_simple(convert_name, sim_exp):
             'Sync': np.array([1, 0, 0, 0, 1]),
             })
     test_data = {
-        convert_name('TEST1~wavelength=700nm~material=Au'): sin_data,
-        convert_name('TEST1~wavelength=750nm~material=Au'): sin_data,
-        convert_name('TEST1~wavelength=700nm~material=Al'): sin_data,
-        convert_name('TEST1~wavelength=750nm~material=Al'): sin_data,
+        convert_name('TEST1~material=Au~wavelength=700nm'): sin_data,
+        convert_name('TEST1~material=Au~wavelength=750nm'): sin_data,
+        convert_name('TEST1~material=Al~wavelength=700nm'): sin_data,
+        convert_name('TEST1~material=Al~wavelength=750nm'): sin_data,
     }
     exp = Experiment(
             name='TEST1', kind='test',
@@ -133,29 +133,29 @@ def test_process_photocurrent_simple(convert_name, sim_exp):
     R0_actual, dR_actual, inoise_actual = exp.process_photocurrent(
             reference_condition=reference_condition, sim_exp=sim_exp)
     R0_desired = {
-        convert_name('TEST1~wavelength=700nm~material=Au'): 0.93329,
-        convert_name('TEST1~wavelength=750nm~material=Au'): 0.948615,
-        convert_name('TEST1~wavelength=700nm~material=Al'): 0.93329,
-        convert_name('TEST1~wavelength=750nm~material=Al'): 0.948615,
+        convert_name('TEST1~material=Au~wavelength=700nm'): 0.93329,
+        convert_name('TEST1~material=Au~wavelength=750nm'): 0.948615,
+        convert_name('TEST1~material=Al~wavelength=700nm'): 0.93329,
+        convert_name('TEST1~material=Al~wavelength=750nm'): 0.948615,
     }
     dR_desired = {
-        convert_name('TEST1~wavelength=700nm~material=Au'): \
+        convert_name('TEST1~material=Au~wavelength=700nm'): \
             0.93329 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~wavelength=750nm~material=Au'): \
+        convert_name('TEST1~material=Au~wavelength=750nm'): \
             0.948615 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~wavelength=700nm~material=Al'): \
+        convert_name('TEST1~material=Al~wavelength=700nm'): \
             0.93329 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~wavelength=750nm~material=Al'): \
+        convert_name('TEST1~material=Al~wavelength=750nm'): \
             0.948615 / np.sqrt(2) * dR_R0_ratio,
     }
     inoise_desired = {
-        convert_name('TEST1~wavelength=700nm~material=Au'): \
+        convert_name('TEST1~material=Au~wavelength=700nm'): \
             8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
-        convert_name('TEST1~wavelength=750nm~material=Au'): \
+        convert_name('TEST1~material=Au~wavelength=750nm'): \
             8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
-        convert_name('TEST1~wavelength=700nm~material=Al'): \
+        convert_name('TEST1~material=Al~wavelength=700nm'): \
             8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
-        convert_name('TEST1~wavelength=750nm~material=Al'): \
+        convert_name('TEST1~material=Al~wavelength=750nm'): \
             8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
     }
     assertDataDictEqual(R0_actual, R0_desired)

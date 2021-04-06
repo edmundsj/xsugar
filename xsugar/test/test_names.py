@@ -11,29 +11,25 @@ from xsugar import Experiment, ureg
 from sciparse import assertDataDictEqual
 from ast import literal_eval
 
-def testNameFromCondition(exp, exp_data):
+def testNameFromCondition(exp, exp_data, convert_name):
     """
     Tests whether we can properly generate a name from a specified
     condition
     """
-    js, ns = exp_data['major_separator'], exp_data['minor_separator']
-    filename_desired = 'TEST1' + js + 'wavelength' + ns + '1' + js + \
-        'temperature' + ns + '25'
+    name_desired = convert_name('TEST1~temperature=25~wavelength=1')
     condition = {'wavelength': 1, 'temperature': 25}
-    filename_actual = exp.nameFromCondition(condition)
-    assert_equal(filename_actual, filename_desired)
+    name_actual = exp.nameFromCondition(condition)
+    assert_equal(name_actual, name_desired)
 
-def testNameFromConditionWithID(exp, exp_data):
+def testNameFromConditionWithID(exp, exp_data, convert_name):
     """
     Tests whether we can properly generate a name from a specified
     condition
     """
-    js, ns = exp_data['major_separator'], exp_data['minor_separator']
-    filename_desired = 'TEST1' + ns + 'id' + js +  'wavelength' + ns + \
-                       '1' + js + 'temperature' + ns + '25'
+    name_desired = convert_name('TEST1=id~temperature=25~wavelength=1')
     condition = {'ident': 'id', 'wavelength': 1, 'temperature': 25}
-    filename_actual = exp.nameFromCondition(condition)
-    assert_equal(filename_actual, filename_desired)
+    name_actual = exp.nameFromCondition(condition)
+    assert_equal(name_actual, name_desired)
 
 def test_name_from_condition_units(convert_name):
     sampling_frequency = 1.0 * ureg.Hz
@@ -43,7 +39,7 @@ def test_name_from_condition_units(convert_name):
             sampling_frequenc=sampling_frequency,
             wavelength=wavelength, temperature=temperature)
     actual_name = exp.nameFromCondition(exp.conditions[0])
-    desired_name = convert_name('TEST1~wavelength=500nm~temperature=300K')
+    desired_name = convert_name('TEST1~temperature=300K~wavelength=500nm')
     assert_equal(actual_name, desired_name)
 
 def testConditionFromName(exp, exp_data):

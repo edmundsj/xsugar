@@ -9,7 +9,8 @@ from sugarplot import plt, prettifyPlot, default_plotter, power_spectrum_plot, n
 from spectralpy import power_spectrum
 from sciparse import parse_xrd, parse_default, is_scalar, dict_to_string, title_to_quantity, to_standard_quantity, quantity_to_title
 from itertools import permutations
-from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, inoise_func_dBAHz
+from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, inoise_func_dBAHz, factors_from_condition
+import copy
 
 class Experiment:
     """
@@ -203,10 +204,6 @@ class Experiment:
         self.conditions[insertion_location:insertion_location] = \
              extra_conds
 
-    def factors_from_condition(self, cond):
-        factors = [x for x in cond.keys()]
-        return factors
-
     def get_conditions(self, data_dict=None, exclude=[]):
         """
         Get all the conditions from a given set of data
@@ -239,7 +236,7 @@ class Experiment:
         name = name.replace('~', ', ')
         return name
 
-    def nameFromCondition(self, condition):
+    def nameFromCondition(self, cond):
         """
         Generates filename for an experiment from a condition, returning a name
         with the metadata truncated, experiment name included
@@ -247,11 +244,14 @@ class Experiment:
         :param condition: Condition to generate name for
         """
         partial_filename = self.name
-        if 'ident' in condition.keys():
+        if 'ident' in cond.keys():
             partial_filename = partial_filename + self.minor_separator + \
-                    condition['ident']
-            condition.pop('ident')
-        for key, val in condition.items():
+                    cond['ident']
+            cond.pop('ident')
+        key_list = list(cond.keys())
+        key_list.sort()
+        for key in key_list:
+            val = cond[key]
             if key not in self.constants.keys() and key not in \
             self.metadata.keys():
                 partial_filename += self.major_separator + key + \
@@ -294,7 +294,6 @@ class Experiment:
         name_id = sub_components[0].split(self.minor_separator)
         sub_components = sub_components[1:]
         cond = {}
-#self.validateName(name)
         if len(name_id) > 1: cond.update({'ident': name_id[1]})
 
         cond.update({sub.split(self.minor_separator)[0]:sub.split(self.minor_separator)[1] \
@@ -309,9 +308,23 @@ class Experiment:
                 cond.update(self.metadata[name])
         return cond
 
+    def get_partial_condition(self, cond, exclude_factors=[]):
+        new_cond = copy.copy(cond)
+        if isinstance(exclude_factors, str):
+            exclude_factors = [exclude_factors]
+        for key in cond.keys():
+            if key in self.constants.keys():
+                del new_cond[key]
+        if exclude_factors:
+            for factor in exclude_factors:
+                if factor in new_cond.keys():
+                    del new_cond[factor]
+
+        return new_cond
+
     def derived_quantity(
             self, quantity_func, data_dict=None, quantity_kw={},
-            average_along=None):
+            average_along=None, sum_along=None):
         """
         Extracts derived quantities from a named dictionary of data with some
         arbitrary input functioin, and optional averaging along an arbitrary
@@ -322,15 +335,19 @@ class Experiment:
         :param quantity_kw: Additional keyword arguments to be passed into the quantity function on top of the condition.
         :param average_along: Axis to average along (i.e. replicate or None)
         """
+        if data_dict is None:
+            data_dict = self.data
+
         derived_dict = {}
         for name, data in data_dict.items():
             cond = self.conditionFromName(name)
             quantity = quantity_func(data, dict(cond, **quantity_kw))
             derived_dict[name] = quantity
 
-        if average_along != None:
+        if average_along is not None or sum_along is not None:
             derived_dict = self.average_data(
-                data_dict=derived_dict, average_along=average_along)
+                data_dict=derived_dict, average_along=average_along,
+                sum_along=sum_along)
         return derived_dict
 
     def saveMasterData(self, data_dict=None):
@@ -535,7 +552,7 @@ class Experiment:
         master_dict = {}
         conds = [self.nameToCondition(x, full_condition=False) \
             for x in data_dict.keys()]
-        factors = self.factors_from_condition(conds[0])
+        factors = factors_from_condition(conds[0])
 
         if len(factors) == 1: # Special case - no pairs of data
             single_table = self.master_data(data_dict)
@@ -561,6 +578,8 @@ class Experiment:
             x_factor, c_factor = factor_pair
             remaining_factors = \
                     [x for x in factors if x not in factor_pair]
+            full_conditions = self.get_conditions(
+                    data_dict)
             conditions_excluding_pairs = self.get_conditions(
                     data_dict, exclude=factor_pair)
 
@@ -568,17 +587,23 @@ class Experiment:
                 conditions_excluding_pairs = [{}]
 
             for cond in conditions_excluding_pairs:
-                remaining_data = self.lookup(data_dict, **cond)
-                full_cond = dict({x_factor: 'all'}, **cond)
-                curve_family_name = self.nameFromCondition(full_cond)
+                relevant_data = self.lookup(data_dict, **cond)
+                partial_cond = dict(cond, **{x_factor: 'x', c_factor: 'c'})
+                curve_family_name = self.nameFromCondition(partial_cond)
                 master_dict[curve_family_name] = {}
 
                 curve_families = self.group_data(
-                       remaining_data, group_along=c_factor,
+                       relevant_data, group_along=c_factor,
                        grouping_type='value')
+
                 for k, v in curve_families.items():
+                    full_cond = dict(partial_cond,
+                            **self.conditionFromName(k))
+#full_cond = dict(cond_with_x,
+#**dict({x_factor:'all'}, **partial_cond))
+                    full_name = self.nameFromCondition(full_cond)
                     data_table = self.master_data(v)
-                    master_dict[curve_family_name][k] = data_table
+                    master_dict[curve_family_name][full_name] = data_table
 
         return master_dict
 
@@ -603,7 +628,7 @@ class Experiment:
 
         return return_dict
 
-    def average_data(self, data_dict=None, average_along=None, averaging_type='first'):
+    def average_data(self, data_dict=None, average_along=None, averaging_type='first', sum_along=None):
         """
         User-facing function to average existing data along some axis
 
@@ -611,6 +636,12 @@ class Experiment:
         :param average_along: The axis to average the data along
         :param averaging_type: (if Pandas DataFrame) whether to average the last column only ("last") or all columns but the first column ("first")
         """
+        if sum_along is not None and average_along is None:
+            average_along = sum_along
+            summing = True
+        else:
+            summing = False
+
         if data_dict == None:
             data_dict = self.data
         grouped_data = self.group_data(
@@ -631,13 +662,15 @@ class Experiment:
                     for data in group.values():
                         averaged_data[group_name].iloc[:,-1] += data.iloc[:,-1]
                     averaged_data[group_name].iloc[:,-1] -= first_item.iloc[:,-1]
-                    averaged_data[group_name].iloc[:,-1] /= N_items
+                    if not summing:
+                        averaged_data[group_name].iloc[:,-1] /= N_items
 
                 elif averaging_type == 'first':
                     for data in group.values():
                         averaged_data[group_name].iloc[:,1:] += data.iloc[:, 1:]
                     averaged_data[group_name].iloc[:,1:] -= first_item.iloc[:,1:]
-                    averaged_data[group_name].iloc[:,1:] /= N_items
+                    if not summing:
+                        averaged_data[group_name].iloc[:,1:] /= N_items
                 else:
                      raise ValueError(f'Averaging type {averaging_type} not recognized. Available types are "first" and "last"')
 
@@ -646,7 +679,8 @@ class Experiment:
                 for data in group.values():
                     averaged_data[group_name] += data
                 averaged_data[group_name] -= first_item
-                averaged_data[group_name] /= N_items
+                if not summing:
+                    averaged_data[group_name] /= N_items
             else:
                 raise ValueError(f'type {type(first_item)} not supported. Available types are scalar, Pandas Array')
 
@@ -655,14 +689,14 @@ class Experiment:
     # This function is a mess. It needs to be split up into smaller functions
     # that have a clearly-delineated purpose.
     def plot(
-        self, data_dict=None, average_along=None,
+        self, data_dict=None, average_along=None, sum_along=None,
         quantity_func=None, representative='',
         plotter=default_plotter, line_kw={}, subplot_kw={},
-        theory_func=None, theory_kw={}, theory_data=None,
+        theory_func=None, theory_kw={}, theory_data_dict=None,
+        theory_data=None,
         postfix='', x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[]):
         """
-        Generates figures from loaded data. Currently assumes the data is in
-        the form of a pandas array.
+        Generates figures from loaded data.
 
         :param average_along: Averages the data along a given axis (i.e. the repilate axis)
         :param quantity_func: Quantity function to extract a quantity from a given dataset or transform that dataset
@@ -678,11 +712,14 @@ class Experiment:
         """
         plotted_figs = []
         plotted_axes = []
-        if average_along:
+        if average_along is not None:
             if postfix != '': postfix += self.major_separator
             postfix += 'averaged'
+        if sum_along is not None:
+            if postfix != '': postfix += self.major_separator
+            postfix += 'summed'
 
-        if not data_dict:
+        if data_dict is None:
             data_dict = self.data
 
         if representative:
@@ -696,7 +733,8 @@ class Experiment:
             dict_to_plot = self.derived_quantity(
                 quantity_func=quantity_func,
                 data_dict=data_dict,
-                average_along=average_along)
+                average_along=average_along,
+                sum_along=sum_along)
         else:
             dict_to_plot = data_dict
 
@@ -826,8 +864,13 @@ class Experiment:
             sim_exp = Experiment(name='REFL2', kind='simulation')
         sim_exp.loadData()
 
-        theoretical_AlN_R0 = \
-                list(sim_exp.lookup(material='AlN').values())[0]
+        partial_conditions = [self.get_partial_condition(c,
+                exclude_factors='wavelength') for c in self.conditions]
+        full_names = [self.nameFromCondition(c) for c in self.conditions]
+
+        theory_data_dict = {name: sim_exp.lookup(**c) for name, c in \
+            zip(full_names, partial_conditions)}
+
         theoretical_AlN_mod_10 = \
                 list(sim_exp.lookup(material='AlN',
                             modulation_voltage=10).values())[0]
@@ -836,6 +879,7 @@ class Experiment:
         theoretical_AlN_mod_20 = \
                 list(sim_exp.lookup(material='AlN',
                             modulation_voltage=20).values())[0]
+
         theoretical_AlN_mod_20['R'] /= (2*np.sqrt(2))
         reduced_data = sim_exp.lookup(material='AlN')
 
@@ -856,7 +900,7 @@ class Experiment:
                 postfix='inoise')
         R0_figs, R0_axes = self.plot(
                 data_dict=R0_dict,
-                theory_data=theoretical_AlN_R0,
+                theory_data_dict=theory_R0_data_dict,
                 x_axis_include=x_axis_include,
                 x_axis_exclude=x_axis_exclude,
                 c_axis_include=c_axis_include,
@@ -866,16 +910,6 @@ class Experiment:
         dR_figs, dR_axes = self.plot(
                 data_dict=self.lookup(dR_dict, voltage=10*ureg.V),
                 theory_data=theoretical_AlN_mod_10,
-                x_axis_include=x_axis_include,
-                x_axis_exclude=x_axis_exclude,
-                c_axis_include=c_axis_include,
-                c_axis_exclude=c_axis_exclude,
-                subplot_kw={'ylabel': r'$\Delta R_{rms}$'},
-                postfix='dR')
-
-        dR_figs, dR_axes = self.plot(
-                data_dict=self.lookup(dR_dict, voltage=20*ureg.V),
-                theory_data=theoretical_AlN_mod_20,
                 x_axis_include=x_axis_include,
                 x_axis_exclude=x_axis_exclude,
                 c_axis_include=c_axis_include,

@@ -20,7 +20,7 @@ def testSavePSDFigureFilename(exp, path_data, convert_name):
     raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
                              'Current (mV)': [4,4.5,6]})
     cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name = convert_name('TEST1~wavelengths-1~temperatures-25')
+    condition_name = convert_name('TEST1~temperatures=25~wavelengths=1')
     filename_desired = condition_name + '~PSD.png'
     exp.data = {condition_name: raw_data}
     exp.plotPSD(average_along=None)
@@ -35,8 +35,8 @@ def testSavePSDFigureMultipleFilename(exp, path_data, convert_name):
     raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
                              'Current (mV)': [4,4.5,6]})
     cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name_1 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-0')
-    condition_name_2 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-1')
+    condition_name_1 = convert_name('TEST1~replicate=0~temperatures=25~wavelengths=1')
+    condition_name_2 = convert_name('TEST1~replicate=1~temperatures=25~wavelengths=1')
     filename_desired_1 = condition_name_1 + '~PSD.png'
     filename_desired_2 = condition_name_2 + '~PSD.png'
     exp.data = {condition_name_1: raw_data, condition_name_2: raw_data}
@@ -58,9 +58,9 @@ def testSavePSDFigureAverageFilename(exp, path_data, convert_name):
     raw_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                              'Current (mV)': [8,4.5,8]})
     cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name_1 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-1')
-    condition_name_2 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-2')
-    filename_desired = convert_name('TEST1~wavelengths-1~temperatures-25~PSD~averaged.png')
+    condition_name_1 = convert_name('TEST1~replicate=1~temperatures=25~wavelengths=1')
+    condition_name_2 = convert_name('TEST1~replicate=1~temperatures=25~wavelengths=2')
+    filename_desired = convert_name('TEST1~temperatures=25~wavelengths=1~PSD~averaged.png')
 
     exp.data = {condition_name_1: raw_data,
                  condition_name_2: raw_data_2}
@@ -94,10 +94,11 @@ def testGenerateRepresentativePlot(exp, path_data, convert_name):
               'replicate': 1}
     cond_2 = {'wavelength': 1, 'temperature': 25, 'frequency': 8500,
               'replicate': 2}
-    condition_name_1 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-1')
-    condition_name_2 = convert_name('TEST1~wavelengths-1~temperatures-25~replicate-2')
+    condition_name_1 = convert_name('TEST1~replicate=1~temperatures=25~wavelengths=1')
+    condition_name_2 = convert_name('TEST1~replicate=2~temperatures=25~wavelengths=1')
 
-    filename_desired = convert_name('TEST1~wavelengths-1~temperatures-25~representative')
+    filename_desired = convert_name('TEST1~temperatures=25~wavelengths=1~representative')
+
     exp.data = {condition_name_1: raw_data,
                  condition_name_2 : raw_data}
     exp.plot(representative='replicate')
