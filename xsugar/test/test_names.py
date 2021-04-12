@@ -110,6 +110,18 @@ def test_drop_name(exp, convert_name):
 
 def test_prettify_name(exp, convert_name):
     initial_name = convert_name('TEST1~wavelength=0.01~temperature=25.0')
-    desired_name = 'wavelength=0.01, temperature=25.0'
+    desired_name = 'temperature=25.0, wavelength=0.01'
+    actual_name = exp.prettify_name(initial_name)
+    assert_equal(actual_name, desired_name)
+
+def test_prettify_name_with_axes(exp, convert_name):
+    initial_name = convert_name('TEST1~wavelength=x~temperature=25.0')
+    desired_name = 'temperature=25.0'
+    actual_name = exp.prettify_name(initial_name)
+    assert_equal(actual_name, desired_name)
+
+def test_prettify_name_underscare(exp, convert_name):
+    initial_name = convert_name('TEST1~modulation_temperature=25.0')
+    desired_name = 'modulation temperature=25.0'
     actual_name = exp.prettify_name(initial_name)
     assert_equal(actual_name, desired_name)

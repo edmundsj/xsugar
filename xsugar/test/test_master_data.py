@@ -355,43 +355,43 @@ def test_master_data_dict_3var(exp, exp_data, convert_name):
         'TEST1~material=x~temperature=c~wavelength=0':
             {'TEST1~material=x~temperature=25.0~wavelength=0':
                 pd.DataFrame({
-                        'material': ['Au', 'Al'],
-                        'Value': [0, 1]}),
+                        'material': ['Al', 'Au'],
+                        'Value': [1, 0]}),
             'TEST1~material=x~temperature=35.0~wavelength=0':
                 pd.DataFrame({
-                        'material': ['Au', 'Al'],
-                        'Value': [2, 3]}),
+                        'material': ['Al', 'Au'],
+                        'Value': [3, 2]}),
             },
         'TEST1~material=x~temperature=c~wavelength=1':
             {'TEST1~material=x~temperature=25.0~wavelength=1':
                 pd.DataFrame({
-                        'material': ['Au', 'Al'],
-                        'Value': [4, 5]}),
+                        'material': ['Al', 'Au'],
+                        'Value': [5, 4]}),
             'TEST1~material=x~temperature=35.0~wavelength=1':
                 pd.DataFrame({
-                        'material': ['Au', 'Al'],
-                        'Value': [6,7]}),
+                        'material': ['Al', 'Au'],
+                        'Value': [7, 6]}),
             },
         'TEST1~material=x~temperature=25.0~wavelength=c':
             {'TEST1~material=x~temperature=25.0~wavelength=0':
                 pd.DataFrame({
-                    'material': ['Au', 'Al'],
-                    'Value': [0, 1]}),
+                    'material': ['Al', 'Au'],
+                    'Value': [1, 0]}),
             'TEST1~material=x~temperature=25.0~wavelength=1':
                 pd.DataFrame({
-                    'material': ['Au', 'Al'],
-                    'Value': [4, 5]}),
+                    'material': ['Al', 'Au'],
+                    'Value': [5, 4]}),
             },
 
         'TEST1~material=x~temperature=35.0~wavelength=c':
             {'TEST1~material=x~temperature=35.0~wavelength=0':
                 pd.DataFrame({
-                    'material': ['Au', 'Al'],
-                    'Value': [2, 3]}),
+                    'material': ['Al', 'Au'],
+                    'Value': [3, 2]}),
             'TEST1~material=x~temperature=35.0~wavelength=1':
                 pd.DataFrame({
-                    'material': ['Au', 'Al'],
-                    'Value': [6, 7]}),
+                    'material': ['Al', 'Au'],
+                    'Value': [7, 6]}),
             },
         'TEST1~material=c~temperature=x~wavelength=0':
             {'TEST1~material=Au~temperature=x~wavelength=0':

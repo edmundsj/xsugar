@@ -155,8 +155,11 @@ class Experiment:
         if not factors:
             factors = self.factors
         cond_list = []
-        keys = factors.keys()
-        vals = factors.values()
+        keys = list(factors.keys())
+        vals = list(factors.values())
+        for i, val in enumerate(vals):
+            if is_scalar(val) or isinstance(val, str):
+                vals[i] = [val]
         if comb_type == 'cartesian':
             for cond in itertools.product(*vals):
                 iterable_cond = dict(zip(keys, cond))
@@ -179,15 +182,15 @@ class Experiment:
 
         return cond_list
 
-    def append_condition(self, **kwargs):
+    def append_condition(self, comb_type='individual', **kwargs):
         """
         Appends a single condition to the existing list of conditions using the metadata already defined in the experiment initialization. Modifies in-place.
 
         :param kwargs: Keyword arguments with the values for the condition you want to append
         """
-        extra_cond = self.generate_conditions(
-                comb_type='individual', **kwargs)
-        self.conditions.extend(extra_cond)
+        extra_conds = self.generate_conditions(
+                comb_type=comb_type, **kwargs)
+        self.conditions.extend(extra_conds)
 
     def insert_condition(
             self, insertion_location, comb_type='individual', **kwargs):
@@ -232,8 +235,16 @@ class Experiment:
         return name.replace(self.name + self.major_separator, '')
 
     def prettify_name(self, name):
+        cond = self.conditionFromName(name)
+        new_cond = {}
+        for k, v in cond.items():
+            if v != 'x' and v != 'c':
+                new_cond[k] = v
+
+        name = self.nameFromCondition(new_cond)
         name = self.drop_name(name)
         name = name.replace('~', ', ')
+        name = name.replace('_', ' ')
         return name
 
     def nameFromCondition(self, cond):
@@ -299,7 +310,10 @@ class Experiment:
         cond.update({sub.split(self.minor_separator)[0]:sub.split(self.minor_separator)[1] \
                 for sub in sub_components})
         for key, val in cond.items():
-            try: cond[key] = ureg.parse_expression(val)
+            try:
+                if val == 'c' or val == 'dR':
+                    raise pint.errors.UndefinedUnitError
+                cond[key] = ureg.parse_expression(val)
             except pint.errors.UndefinedUnitError:
                 cond[key] = val
         if full_condition:
@@ -381,6 +395,11 @@ class Experiment:
             self.data[name] = data
             self.metadata[name] = metadata
             self.constants = metadata # Inefficient but the best I can think of
+            cond = self.conditionFromName(name)
+            if self.conditions == [{}]:
+                self.conditions[0] = cond
+            else:
+                self.conditions.append(cond)
 
         for val in self.metadata.values():
             self.constants = dict(self.constants.items() & val.items())
@@ -599,10 +618,13 @@ class Experiment:
                 for k, v in curve_families.items():
                     full_cond = dict(partial_cond,
                             **self.conditionFromName(k))
-#full_cond = dict(cond_with_x,
-#**dict({x_factor:'all'}, **partial_cond))
                     full_name = self.nameFromCondition(full_cond)
                     data_table = self.master_data(v)
+                    column_hits = [x_factor in col for col in data_table.columns]
+                    x_column_name = data_table.columns[column_hits][0]
+                    data_table.sort_values(
+                            x_column_name, inplace=True,
+                            ignore_index=True)
                     master_dict[curve_family_name][full_name] = data_table
 
         return master_dict
@@ -686,13 +708,13 @@ class Experiment:
 
         return averaged_data
 
-    # This function is a mess. It needs to be split up into smaller functions
+    # This function is a mess. It needs to be split up into smaller functions. One for legend generation, one for data preparation, etc.
     # that have a clearly-delineated purpose.
     def plot(
         self, data_dict=None, average_along=None, sum_along=None,
         quantity_func=None, representative='',
         plotter=default_plotter, line_kw={}, subplot_kw={},
-        theory_func=None, theory_kw={}, theory_data_dict=None,
+        theory_func=None, theory_kw={}, theory_data_dict={},
         theory_data=None,
         postfix='', x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[]):
         """
@@ -748,6 +770,8 @@ class Experiment:
                     x_axis_exclude=x_axis_exclude,
                         c_axis_include=c_axis_include,
                         c_axis_exclude=c_axis_exclude)
+            if dict_to_plot == {}:
+                raise ValueError('ERROR: No plots generated for combination of desired inclusion / exclusion criteria.')
 
         for name, data in dict_to_plot.items():
             is_pandas = isinstance(data, pd.DataFrame)
@@ -755,11 +779,20 @@ class Experiment:
             if is_dict:
                 fig, ax = None, None
                 legend = []
+                outer_cond = self.conditionFromName(name)
+                c_factor = ''
+                for k, v in outer_cond.items():
+                    if v == 'c':
+                        c_factor = k
+
                 for inner_name, inner_data in data.items():
+                    if inner_name in theory_data_dict:
+                        theory_data = theory_data_dict[inner_name]
                     if not fig:
                         fig, ax = plotter(
                             inner_data, theory_func=theory_func,
-                            theory_kw=theory_kw, theory_data=theory_data,
+                            theory_kw=theory_kw,
+                            theory_data=theory_data,
                             subplot_kw=subplot_kw,
                             line_kw=line_kw)
                     else:
@@ -768,12 +801,19 @@ class Experiment:
                             theory_func=theory_func, theory_kw=theory_kw,
                             theory_data=theory_data,
                             subplot_kw=subplot_kw, line_kw=line_kw)
+
+                    # Generate the legend
+                    inner_cond = self.conditionFromName(inner_name)
+                    stripped_inner_cond = \
+                        {k: v for k, v in inner_cond.items() if k==c_factor}
+                    stripped_inner_name = self.nameFromCondition(stripped_inner_cond)
+
                     if theory_func is None and theory_data is None:
-                        legend.append(self.prettify_name(inner_name))
+                        legend.append(self.prettify_name(stripped_inner_name))
                     else:
-                        legend.append(self.prettify_name(inner_name) + ' (Measured)')
-                        legend.append(self.prettify_name(inner_name) + ' (Theory)')
-                ax.legend(legend)
+                        legend.append(self.prettify_name(stripped_inner_name) + ' (Measured)')
+                        legend.append(self.prettify_name(stripped_inner_name) + ' (Theory)')
+                ax.legend(legend, fontsize=10)
                 plotted_figs.append(fig)
                 plotted_axes.append(ax)
             elif is_pandas:
@@ -864,24 +904,28 @@ class Experiment:
             sim_exp = Experiment(name='REFL2', kind='simulation')
         sim_exp.loadData()
 
-        partial_conditions = [self.get_partial_condition(c,
-                exclude_factors='wavelength') for c in self.conditions]
-        full_names = [self.nameFromCondition(c) for c in self.conditions]
+        partial_conditions_R0 = [dict(self.get_partial_condition(c,
+                exclude_factors=['wavelength', 'voltage', 'modulation_voltage', 'amplitude']), spectra='R0') for c in self.conditions]
+        partial_conditions_dR = [dict(self.get_partial_condition(
+                   c, exclude_factors=['wavelength']), spectra='deltaR') \
+                   for c in self.conditions]
 
-        theory_data_dict = {name: sim_exp.lookup(**c) for name, c in \
-            zip(full_names, partial_conditions)}
+        full_names = [self.nameFromCondition(dict(c, wavelength='x')) \
+                for c in self.conditions]
 
-        theoretical_AlN_mod_10 = \
-                list(sim_exp.lookup(material='AlN',
-                            modulation_voltage=10).values())[0]
-        theoretical_AlN_mod_10['R'] /= (2*np.sqrt(2))
+        available_R0_data = \
+                [sim_exp.lookup(**c) for c in partial_conditions_R0]
+        available_dR_data = \
+                [sim_exp.lookup(**c) for c in partial_conditions_dR]
+        theory_data_dict_R0 = \
+            {name: list(data.values())[0] for name, data in \
+            zip(full_names, available_R0_data) if data != {}}
+        theory_data_dict_dR = \
+            {name: list(data.values())[0] for name, data in \
+                zip(full_names, available_dR_data) if data != {}}
 
-        theoretical_AlN_mod_20 = \
-                list(sim_exp.lookup(material='AlN',
-                            modulation_voltage=20).values())[0]
-
-        theoretical_AlN_mod_20['R'] /= (2*np.sqrt(2))
-        reduced_data = sim_exp.lookup(material='AlN')
+        for data in theory_data_dict_dR.values():
+            data['R'] /= (2*np.sqrt(2))
 
         R0_dict, dR_dict, noise_photocurrents_dict = \
                  self.process_photocurrent(
@@ -889,6 +933,24 @@ class Experiment:
                          average_along=average_along,
                          representative=representative, sim_exp=sim_exp)
 
+        R0_figs, R0_axes = self.plot(
+                data_dict=R0_dict,
+                theory_data_dict=theory_data_dict_R0,
+                x_axis_include=x_axis_include,
+                x_axis_exclude=x_axis_exclude,
+                c_axis_include=c_axis_include,
+                c_axis_exclude=c_axis_exclude,
+                subplot_kw={'ylabel': r'$R_0$'},
+                postfix='R0')
+        dR_figs, dR_axes = self.plot(
+            data_dict=dR_dict,
+            theory_data_dict=theory_data_dict_dR,
+            x_axis_include=x_axis_include,
+            x_axis_exclude=x_axis_exclude,
+            c_axis_include=c_axis_include,
+            c_axis_exclude=c_axis_exclude,
+            subplot_kw={'ylabel': r'$\Delta R_{rms}$'},
+            postfix='dR')
         inoise_figs, inoise_axes = self.plot(
                 data_dict=noise_photocurrents_dict,
                 theory_func=inoise_func_dBAHz,
@@ -898,24 +960,6 @@ class Experiment:
                 c_axis_exclude=c_axis_exclude,
                 plotter=power_spectrum_plot,
                 postfix='inoise')
-        R0_figs, R0_axes = self.plot(
-                data_dict=R0_dict,
-                theory_data_dict=theory_R0_data_dict,
-                x_axis_include=x_axis_include,
-                x_axis_exclude=x_axis_exclude,
-                c_axis_include=c_axis_include,
-                c_axis_exclude=c_axis_exclude,
-                subplot_kw={'ylabel': r'$R_0$'},
-                postfix='R0')
-        dR_figs, dR_axes = self.plot(
-                data_dict=self.lookup(dR_dict, voltage=10*ureg.V),
-                theory_data=theoretical_AlN_mod_10,
-                x_axis_include=x_axis_include,
-                x_axis_exclude=x_axis_exclude,
-                c_axis_include=c_axis_include,
-                c_axis_exclude=c_axis_exclude,
-                subplot_kw={'ylabel': r'$\Delta R_{rms}$'},
-                postfix='dR')
 
         return (R0_figs, R0_axes,
                 dR_figs, dR_axes,

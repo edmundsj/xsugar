@@ -38,7 +38,7 @@ def testLoadXRDData(convert_name):
         69.085, 69.09, 69.095, 69.1, 69.105, 69.11, 69.115],
         'Counts': [24, 30, 28, 40, 132, 272, 3472, 16368,21970,10562,
                    1210,264,130,64]})
-    data_actual = exp.data[convert_name('TEST1~1~type-locked_coupled~peak-Si')]
+    data_actual = exp.data[convert_name('TEST1~wafer=1~type-locked_coupled~peak-Si')]
     assert_frame_equal(data_actual, data_desired)
 
 def testLoadXRDMetadata(convert_name):
@@ -51,7 +51,7 @@ def testLoadXRDMetadata(convert_name):
         'increment': 0.005, 'scantype': 'locked coupled',
         'start': 69.05, 'steps': 14, 'time': 1,
         'theta': 34.0, '2theta': 68.0, 'phi': 180.13, 'chi': -0.972}
-    metadata_actual = exp.metadata[convert_name('TEST1~1~type-locked_coupled~peak-Si')]
+    metadata_actual = exp.metadata[convert_name('TEST1~wafer=1~type-locked_coupled~peak-Si')]
     assert_equal(metadata_actual, metadata_desired)
 
 def testLoadConstants(exp, exp_data, convert_name):
@@ -113,3 +113,25 @@ def testLookup(exp, convert_name):
         convert_name('TEST1~wavelengths-1~temperatures-25'):fudge_data,
         convert_name('TEST1~wavelengths-2~temperatures-25'):fudge_data,}
     assertDataDictEqual(data_actual, data_desired)
+
+def test_load_conditions(exp, exp_data, convert_name):
+    """
+    Tests that we can load metadata from a file successfully
+    """
+    wavelengths = np.array([1, 2, 3])
+    temperatures = np.array([25, 50])
+    frequency = 8500
+    with open(exp_data['data_full_path'] + \
+              convert_name('TEST1~wavelengths-1~temperatures-25.csv'), 'w+') as fh:
+        fh.write('{"frequency": 8500}\n')
+        fh.write(f'Time, Data\n')
+        fh.write(f'1, 2\n')
+    exp = Experiment(name='TEST1', kind='test')
+    exp.loadData()
+    metadata_actual = exp.metadata
+    conditions_desired = [{
+            'wavelengths': 1,
+            'temperatures': 25,
+            'frequency': frequency}]
+    conditions_actual = exp.conditions
+    assert_equal(conditions_actual, conditions_desired)
