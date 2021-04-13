@@ -121,8 +121,8 @@ def test_process_photocurrent_simple(convert_name, sim_exp):
             })
     test_data = {
         convert_name('TEST1~material=Au~wavelength=700nm'): sin_data,
-        convert_name('TEST1~material=Au~wavelength=750nm'): sin_data,
         convert_name('TEST1~material=Al~wavelength=700nm'): sin_data,
+        convert_name('TEST1~material=Au~wavelength=750nm'): sin_data,
         convert_name('TEST1~material=Al~wavelength=750nm'): sin_data,
     }
     exp = Experiment(
@@ -134,26 +134,26 @@ def test_process_photocurrent_simple(convert_name, sim_exp):
             reference_condition=reference_condition, sim_exp=sim_exp)
     R0_desired = {
         convert_name('TEST1~material=Au~wavelength=700nm'): 0.93329,
-        convert_name('TEST1~material=Au~wavelength=750nm'): 0.948615,
         convert_name('TEST1~material=Al~wavelength=700nm'): 0.93329,
+        convert_name('TEST1~material=Au~wavelength=750nm'): 0.948615,
         convert_name('TEST1~material=Al~wavelength=750nm'): 0.948615,
     }
     dR_desired = {
         convert_name('TEST1~material=Au~wavelength=700nm'): \
             0.93329 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~material=Au~wavelength=750nm'): \
-            0.948615 / np.sqrt(2) * dR_R0_ratio,
         convert_name('TEST1~material=Al~wavelength=700nm'): \
             0.93329 / np.sqrt(2) * dR_R0_ratio,
+        convert_name('TEST1~material=Au~wavelength=750nm'): \
+            0.948615 / np.sqrt(2) * dR_R0_ratio,
         convert_name('TEST1~material=Al~wavelength=750nm'): \
             0.948615 / np.sqrt(2) * dR_R0_ratio,
     }
     inoise_desired = {
         convert_name('TEST1~material=Au~wavelength=700nm'): \
             8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
-        convert_name('TEST1~material=Au~wavelength=750nm'): \
-            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
         convert_name('TEST1~material=Al~wavelength=700nm'): \
+            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+        convert_name('TEST1~material=Au~wavelength=750nm'): \
             8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
         convert_name('TEST1~material=Al~wavelength=750nm'): \
             8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
@@ -222,7 +222,7 @@ def test_plot_photocurrent_simple(convert_name, sim_exp):
     R0_ax.plot(Al_R0_data['Wavelength (nm)'].values, Al_R0_data['R'].values, linestyle='dashed')
     R0_ax.set_xlabel('wavelength (nm)')
     R0_ax.set_ylabel(r'$R_0$')
-    R0_ax.set_xlim(700*0.9, 750*1.1)
+    R0_ax.set_xlim(870, 1100)
 
     # NOTE - This is the pk-pk data for 10V amplitude. To convert to rms,
     # We need only to divide by 2 * sqrt(2)
@@ -237,6 +237,7 @@ def test_plot_photocurrent_simple(convert_name, sim_exp):
             0.948615 / np.sqrt(2) * dR_R0_ratio])
     dR_ax.set_xlabel('wavelength (nm)')
     dR_ax.set_ylabel(r'$\Delta R_{rms}$')
+    dR_ax.set_xlim(870, 1100)
 
     inoise_fig_desired = Figure()
     inoise_ax_desired = inoise_fig_desired.subplots()
@@ -362,7 +363,7 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
     R0_ax.plot(AlN_R0_data['Wavelength (nm)'].values, AlN_R0_data['R'].values, linestyle='dashed')
     R0_ax.set_xlabel('wavelength (nm)')
     R0_ax.set_ylabel(r'$R_0$')
-    R0_ax.set_xlim(850*0.9, 1150*1.1)
+    R0_ax.set_xlim(880, 1100)
 
     AlN_dR_data = sim_exp.data['REFL2~material=AlN~modulation_voltage=10V~spectra=deltaR']
     # NOTE - This is the pk-pk data for 10V amplitude. To convert to rms,
@@ -383,7 +384,7 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
             linestyle='dashed')
     dR_ax.set_xlabel('wavelength (nm)')
     dR_ax.set_ylabel(r'$\Delta R_{rms}$')
-    dR_ax.set_xlim(850*0.9, 1150*1.1)
+    dR_ax.set_xlim(880, 1100)
 
     inoise_fig_desired = Figure()
     inoise_ax_desired = inoise_fig_desired.subplots()

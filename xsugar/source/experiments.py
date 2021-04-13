@@ -841,7 +841,7 @@ class Experiment:
         self.plot(
             average_along=average_along,
             quantity_func=psdFunction, plotter=power_spectrum_plot,
-            representative=representative, postfix='PSD', **kwargs)
+            representative=representative, postfix='PSD')
 
     def process_photocurrent(
             self, reference_condition, average_along=None, representative=False, sim_exp=None):
@@ -867,7 +867,8 @@ class Experiment:
         reference_R0 = normalize_reflectance(
                 reference_photocurrent_table,
                 reference_photocurrent_table,
-                theoretical_Au_R0)
+                theoretical_Au_R0,
+                column_units=ureg.nm)
 
         dc_photocurrents = self.master_data(self.derived_quantity(
                 quantity_func=dc_photocurrent,
@@ -876,13 +877,17 @@ class Experiment:
         mod_photocurrents = self.master_data(self.derived_quantity(
                 quantity_func=modulated_photocurrent,
                 data_dict=self.data))
-
-        R0_dict = self.data_from_master(normalize_reflectance(
-                dc_photocurrents, reference_photocurrent_table,
-                theoretical_Au_R0, column_units=ureg.nm))
-        dR_dict = self.data_from_master(normalize_reflectance(
+        R0_table = normalize_reflectance(
+                dc_photocurrents,
+                reference_photocurrent_table,
+                theoretical_Au_R0,
+                column_units=ureg.nm)
+        dR_table = normalize_reflectance(
                 mod_photocurrents, reference_photocurrent_table,
-                theoretical_Au_R0, column_units=ureg.nm))
+                theoretical_Au_R0, column_units=ureg.nm)
+
+        R0_dict = self.data_from_master(R0_table)
+        dR_dict = self.data_from_master(dR_table)
 
         noise_photocurrents_dict = self.derived_quantity(
                 quantity_func=noise_current,
@@ -940,7 +945,7 @@ class Experiment:
                 x_axis_exclude=x_axis_exclude,
                 c_axis_include=c_axis_include,
                 c_axis_exclude=c_axis_exclude,
-                subplot_kw={'ylabel': r'$R_0$'},
+                subplot_kw={'ylabel': r'$R_0$', 'xlim': (870, 1100)},
                 postfix='R0')
         dR_figs, dR_axes = self.plot(
             data_dict=dR_dict,
@@ -949,7 +954,7 @@ class Experiment:
             x_axis_exclude=x_axis_exclude,
             c_axis_include=c_axis_include,
             c_axis_exclude=c_axis_exclude,
-            subplot_kw={'ylabel': r'$\Delta R_{rms}$'},
+            subplot_kw={'ylabel': r'$\Delta R_{rms}$', 'xlim': (870, 1100)},
             postfix='dR')
         inoise_figs, inoise_axes = self.plot(
                 data_dict=noise_photocurrents_dict,
