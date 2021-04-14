@@ -1,7 +1,7 @@
 from liapy import LIA
 from sciparse import frequency_bin_size, column_from_unit, cname_from_unit, is_scalar
 from spectralpy import power_spectrum
-from xsugar import ureg
+from xsugar import ureg, condition_is_subset, condition_from_name
 import numpy as np
 
 def dc_photocurrent(data, cond):
@@ -18,7 +18,7 @@ def modulated_photocurrent(data, cond):
     else:
         sync_phase_delay = np.pi
     extracted_voltage = lia.extract_signal_amplitude(
-            mode='rms', sync_phase_delay=sync_phase_delay)
+            mode='amplitude', sync_phase_delay=sync_phase_delay)
     extracted_current = (extracted_voltage / cond['gain']).to(ureg.pA)
     return extracted_current
 
@@ -51,3 +51,28 @@ def inoise_func_dBAHz(xdata, R=1*ureg.Mohm):
         return inoise
     elif isinstance(xdata, (list, np.ndarray, tuple)):
         return np.ones(len(xdata))*inoise
+
+def match_theory_data(curve_name, sim_exp):
+    """
+    :param curve_dict: Data dictionary to be plotted as a single curve. Assumes dictionary has a single key-value pair of the form name: data
+    :param sim_exp: Experiment from which to draw the theoretical data
+
+    """
+    curve_condition = condition_from_name(curve_name)
+
+    sim_exp_partial_conditions = [condition_from_name(n) for n in sim_exp.data.keys()]
+    is_subset = [condition_is_subset(c, curve_condition) \
+        for c in sim_exp_partial_conditions]
+    subset_indices = [i for i, val in enumerate(is_subset) if val]
+    matching_conditions = [sim_exp.conditions[i] for i in subset_indices]
+    matching_names = [sim_exp.nameFromCondition(c) for c in matching_conditions]
+
+    data_values = [sim_exp.data[name] for name in matching_names]
+
+    if len(subset_indices) > 1:
+        warnings.warn('Warning: more than one theoretical dataset matches the desired dataset. Matches are ')
+
+    if len(data_values) >= 1:
+        return data_values[0]
+    elif len(data_values) == 0:
+        return None

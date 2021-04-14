@@ -21,16 +21,6 @@ def testNameFromCondition(exp, exp_data, convert_name):
     name_actual = exp.nameFromCondition(condition)
     assert_equal(name_actual, name_desired)
 
-def testNameFromConditionWithID(exp, exp_data, convert_name):
-    """
-    Tests whether we can properly generate a name from a specified
-    condition
-    """
-    name_desired = convert_name('TEST1=id~temperature=25~wavelength=1')
-    condition = {'ident': 'id', 'wavelength': 1, 'temperature': 25}
-    name_actual = exp.nameFromCondition(condition)
-    assert_equal(name_actual, name_desired)
-
 def test_name_from_condition_units(convert_name):
     sampling_frequency = 1.0 * ureg.Hz
     temperature = ureg.K * np.array([300, 305])
@@ -85,20 +75,6 @@ def testConditionFromNameMetadata(exp, exp_data):
     exp.metadata[name_desired] = \
         {'horn': 'shoe'}
 
-    condition_actual = exp.conditionFromName(name_desired)
-    assert_equal(condition_actual, condition_desired)
-
-
-def testConditionFromNameWithID(exp, exp_data):
-    """
-    Tests whether we can generate a condition from a specified name
-    """
-    js, ns = exp_data['major_separator'], exp_data['minor_separator']
-    name_desired = 'TEST1' + ns + 'id' + js + 'wavelength' + ns + \
-                       '1' + js + 'temperature' + ns + '25'
-    condition_desired = {'ident': 'id', 'wavelength': 1,
-                         'temperature': 25,
-                         'frequency': 8500}
     condition_actual = exp.conditionFromName(name_desired)
     assert_equal(condition_actual, condition_desired)
 

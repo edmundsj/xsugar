@@ -11,6 +11,7 @@ def sim_exp():
     file_location = os.path.dirname(os.path.abspath(__file__))
     base_path = file_location + '/data'
     sim_exp = Experiment(name='REFL2', kind='test', base_path=base_path)
+    sim_exp.loadData()
     return sim_exp
 
 def test_dc_photocurrent():
@@ -45,7 +46,7 @@ def test_modulated_photocurrent():
             'voltage (mV)': voltages.to(ureg.mV).magnitude,
             'Sync': zero_column
             })
-    desired_data = (0.5 * ureg.mV / gain).to(ureg.pA) / np.sqrt(2)
+    desired_data = (0.5 * ureg.mV / gain).to(ureg.pA)
     actual_data = modulated_photocurrent(data, cond)
     assert_allclose_qt(actual_data, desired_data)
 
@@ -133,20 +134,20 @@ def test_process_photocurrent_simple(convert_name, sim_exp):
     R0_actual, dR_actual, inoise_actual = exp.process_photocurrent(
             reference_condition=reference_condition, sim_exp=sim_exp)
     R0_desired = {
-        convert_name('TEST1~material=Au~wavelength=700nm'): 0.93329,
-        convert_name('TEST1~material=Al~wavelength=700nm'): 0.93329,
-        convert_name('TEST1~material=Au~wavelength=750nm'): 0.948615,
-        convert_name('TEST1~material=Al~wavelength=750nm'): 0.948615,
+        convert_name('TEST1~material=Au~wavelength=700nm~spectra=R0'): 0.93329,
+        convert_name('TEST1~material=Al~wavelength=700nm~spectra=R0'): 0.93329,
+        convert_name('TEST1~material=Au~wavelength=750nm~spectra=R0'): 0.948615,
+        convert_name('TEST1~material=Al~wavelength=750nm~spectra=R0'): 0.948615,
     }
     dR_desired = {
-        convert_name('TEST1~material=Au~wavelength=700nm'): \
-            0.93329 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~material=Al~wavelength=700nm'): \
-            0.93329 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~material=Au~wavelength=750nm'): \
-            0.948615 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~material=Al~wavelength=750nm'): \
-            0.948615 / np.sqrt(2) * dR_R0_ratio,
+        convert_name('TEST1~material=Au~wavelength=700nm~spectra=dR'): \
+            0.93329 * dR_R0_ratio,
+        convert_name('TEST1~material=Al~wavelength=700nm~spectra=dR'): \
+            0.93329 * dR_R0_ratio,
+        convert_name('TEST1~material=Au~wavelength=750nm~spectra=dR'): \
+            0.948615 * dR_R0_ratio,
+        convert_name('TEST1~material=Al~wavelength=750nm~spectra=dR'): \
+            0.948615 * dR_R0_ratio,
     }
     inoise_desired = {
         convert_name('TEST1~material=Au~wavelength=700nm'): \
@@ -170,7 +171,7 @@ def test_plot_photocurrent_simple(convert_name, sim_exp):
     material = ['Au', 'Al']
     gain = 1 * ureg.Mohm
     current_offset = 100*ureg.nA # nA
-    current_amplitude = 10*ureg.pA # 
+    current_amplitude = -10*ureg.pA # 
     dR_R0_ratio = current_amplitude / current_offset
 
     reference_condition = dict(material='Au')
@@ -200,20 +201,20 @@ def test_plot_photocurrent_simple(convert_name, sim_exp):
     }
     dR_desired = {
         convert_name('TEST1~wavelength=700nm~material=Au'): \
-            0.93329 / np.sqrt(2) * dR_R0_ratio,
+            0.93329 * dR_R0_ratio,
         convert_name('TEST1~wavelength=750nm~material=Au'): \
-            0.948615 / np.sqrt(2) * dR_R0_ratio,
+            0.948615 * dR_R0_ratio,
         convert_name('TEST1~wavelength=700nm~material=Al'): \
-            0.93329 / np.sqrt(2) * dR_R0_ratio,
+            0.93329 * dR_R0_ratio,
         convert_name('TEST1~wavelength=750nm~material=Al'): \
-            0.948615 / np.sqrt(2) * dR_R0_ratio,
+            0.948615 * dR_R0_ratio,
     }
     (R0_figs_actual, _, dR_figs_actual, _, inoise_figs_actual, _) =  \
          exp.plot_photocurrent(
                  reference_condition=reference_condition, sim_exp=sim_exp)
 
-    Au_R0_data = sim_exp.data['REFL2~material=Au~modulation_voltage=0V~spectra=R0']
-    Al_R0_data = sim_exp.data['REFL2~material=Al~modulation_voltage=0V~spectra=R0']
+    Au_R0_data = sim_exp.data['REFL2~material=Au~spectra=R0']
+    Al_R0_data = sim_exp.data['REFL2~material=Al~spectra=R0']
     R0_fig_desired = Figure()
     R0_ax = R0_fig_desired.subplots()
     R0_ax.plot([700, 750], [0.93329, 0.948615])
@@ -224,19 +225,19 @@ def test_plot_photocurrent_simple(convert_name, sim_exp):
     R0_ax.set_ylabel(r'$R_0$')
     R0_ax.set_xlim(870, 1100)
 
-    # NOTE - This is the pk-pk data for 10V amplitude. To convert to rms,
+    # NOTE - This is the pk-pk data for 5V amplitude. To convert to rms,
     # We need only to divide by 2 * sqrt(2)
 
     dR_fig_desired = Figure()
     dR_ax = dR_fig_desired.subplots()
     dR_ax.plot([700, 750],
-            [0.93329 / np.sqrt(2) * dR_R0_ratio,
-            0.948615 / np.sqrt(2) * dR_R0_ratio])
+            [0.93329 * dR_R0_ratio,
+            0.948615 * dR_R0_ratio])
     dR_ax.plot([700, 750],
-            [0.93329 / np.sqrt(2) * dR_R0_ratio,
-            0.948615 / np.sqrt(2) * dR_R0_ratio])
+            [0.93329 * dR_R0_ratio,
+            0.948615 * dR_R0_ratio])
     dR_ax.set_xlabel('wavelength (nm)')
-    dR_ax.set_ylabel(r'$\Delta R_{rms}$')
+    dR_ax.set_ylabel(r'$\Delta R_{amp}$')
     dR_ax.set_xlim(870, 1100)
 
     inoise_fig_desired = Figure()
@@ -254,18 +255,18 @@ def test_plot_photocurrent_simple(convert_name, sim_exp):
     inoise_ax_desired.set_ylabel('Power (dBA/Hz)')
 
     assert_figures_equal(inoise_figs_actual[0], inoise_fig_desired, atol=1e-6)
-    assert_figures_equal(R0_figs_actual[0], R0_fig_desired, atol=1e-6)
-    assert_figures_equal(dR_figs_actual[0], dR_fig_desired, atol=1e-6)
+    assert_figures_equal(R0_figs_actual[0], R0_fig_desired, atol=1e-6, skip='ticks')
+    assert_figures_equal(dR_figs_actual[0], dR_fig_desired, atol=1e-6, skip='ticks')
 
 def test_plot_photocurrent_realistic(convert_name, sim_exp):
     """
     Verifies that, given a sinusoidal input with a known offset and amplitude, the correct data is generated.
     """
     wavelength = np.array([850, 1150]) * ureg.nm
-    modulation_voltage = ureg.V * np.array([10, 20])
+    modulation_amplitude = ureg.V * np.array([10, 20])
     gain = 10 * ureg.Mohm
-    current_offset = 100*ureg.nA # nA
-    current_amplitude = 10*ureg.pA # 
+    current_offset = 100*ureg.nA
+    current_amplitude = 10*ureg.pA
     dR_R0_ratio = current_amplitude / current_offset
 
     reference_condition = dict(material='Au')
@@ -274,7 +275,7 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
             'Voltage (mV)': (gain*current_offset).to(ureg.mV).m*np.ones(5),
             'Sync': np.array([1, 0, 0, 0, 1]),
             })
-    sin_data_10V_850nm = pd.DataFrame({
+    sin_data_5V_850nm = pd.DataFrame({
             'Time (ms)': np.array([0, 1, 2, 3, 4]),
             'Voltage (mV)': \
                     0.0261059412418133/0.96400635435947* \
@@ -283,7 +284,7 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
                 np.array([0, -1, 0, 1, 0]),
             'Sync': np.array([1, 0, 0, 0, 1]),
             })
-    sin_data_10V_1150nm = pd.DataFrame({
+    sin_data_5V_1150nm = pd.DataFrame({
             'Time (ms)': np.array([0, 1, 2, 3, 4]),
             'Voltage (mV)': \
                     0.283227973929987/0.975276963043909* \
@@ -292,7 +293,7 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
                 np.array([0, -1, 0, 1, 0]),
             'Sync': np.array([1, 0, 0, 0, 1]),
             })
-    sin_data_20V_850nm = pd.DataFrame({
+    sin_data_10V_850nm = pd.DataFrame({
             'Time (ms)': np.array([0, 1, 2, 3, 4]),
             'Voltage (mV)':
                     0.0261059412418133/0.96400635435947*  \
@@ -301,7 +302,7 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
                 np.array([0, -1, 0, 1, 0]),
             'Sync': np.array([1, 0, 0, 0, 1]),
             })
-    sin_data_20V_1150nm = pd.DataFrame({
+    sin_data_10V_1150nm = pd.DataFrame({
             'Time (ms)': np.array([0, 1, 2, 3, 4]),
             'Voltage (mV)':
                     0.283227973929987/0.975276963043909* \
@@ -311,50 +312,50 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
             'Sync': np.array([1, 0, 0, 0, 1]),
             })
     test_data = {
-        convert_name('TEST1~wavelength=850nm~material=Au~modulation_voltage=0V'): Au_data,
-        convert_name('TEST1~wavelength=1150nm~material=Au~modulation_voltage=0V'): Au_data,
-        convert_name('TEST1~wavelength=850nm~material=AlN~modulation_voltage=10V'): sin_data_10V_850nm,
-        convert_name('TEST1~wavelength=1150nm~material=AlN~modulation_voltage=10V'): sin_data_10V_1150nm,
-        convert_name('TEST1~wavelength=850nm~material=AlN~modulation_voltage=20V'): sin_data_20V_850nm,
-        convert_name('TEST1~wavelength=1150nm~material=AlN~modulation_voltage=20V'): sin_data_20V_1150nm,
+        convert_name('TEST1~wavelength=850nm~material=Au~modulation_amplitude=0V'): Au_data,
+        convert_name('TEST1~wavelength=1150nm~material=Au~modulation_amplitude=0V'): Au_data,
+        convert_name('TEST1~wavelength=850nm~material=AlN~modulation_amplitude=5V'): sin_data_5V_850nm,
+        convert_name('TEST1~wavelength=1150nm~material=AlN~modulation_amplitude=5V'): sin_data_5V_1150nm,
+        convert_name('TEST1~wavelength=850nm~material=AlN~modulation_amplitude=10V'): sin_data_10V_850nm,
+        convert_name('TEST1~wavelength=1150nm~material=AlN~modulation_amplitude=10V'): sin_data_10V_1150nm,
     }
     exp = Experiment(
             name='TEST1', kind='test',
             wavelength=wavelength,
-            modulation_voltage=modulation_voltage,
+            modulation_amplitude=modulation_amplitude,
             material=['AlN'],
             gain=gain)
     exp.append_condition(
         comb_type='cartesian',
         wavelength=wavelength,
         material='Au',
-        modulation_voltage=0*ureg.V,
+        modulation_amplitude=0*ureg.V,
         gain=gain)
     exp.data = test_data
 
     R0_desired = {
-        convert_name('TEST1~wavelength=850nm~modulation_voltage=0V'): 0.0261059412418133,
-        convert_name('TEST1~wavelength=1150nm~modulation_voltage=0V'): 0.283227973929987,
-        convert_name('TEST1~wavelength=850nm~modulation_voltage=0V'): 0.0261059412418133,
-        convert_name('TEST1~wavelength=1150nm~modulation_voltage=0V'): 0.283227973929987,
+        convert_name('TEST1~wavelength=850nm~modulation_amplitude=0V'): 0.0261059412418133,
+        convert_name('TEST1~wavelength=1150nm~modulation_amplitude=0V'): 0.283227973929987,
+        convert_name('TEST1~wavelength=850nm~modulation_amplitude=0V'): 0.0261059412418133,
+        convert_name('TEST1~wavelength=1150nm~modulation_amplitude=0V'): 0.283227973929987,
     }
 
     dR_desired = {
-        convert_name('TEST1~wavelength=850nm~modulation_voltage=10V'): \
-            0.93329 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~wavelength=1150nm~modulation_voltage=10V'): \
-            0.948615 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~wavelength=850nm~modulation_voltage=20V'): \
-            0.93329 / np.sqrt(2) * dR_R0_ratio,
-        convert_name('TEST1~wavelength=1150nm~modulation_voltage=20V'): \
-            0.948615 / np.sqrt(2) * dR_R0_ratio,
+        convert_name('TEST1~wavelength=850nm~modulation_amplitude=5V'): \
+            0.93329 * dR_R0_ratio,
+        convert_name('TEST1~wavelength=1150nm~modulation_amplitude=5V'): \
+            0.948615  * dR_R0_ratio,
+        convert_name('TEST1~wavelength=850nm~modulation_amplitude=10V'): \
+            0.93329 * dR_R0_ratio,
+        convert_name('TEST1~wavelength=1150nm~modulation_amplitude=10V'): \
+            0.948615 * dR_R0_ratio,
     }
     (R0_figs_actual, _, dR_figs_actual, _, inoise_figs_actual, _) =  \
          exp.plot_photocurrent(
                  reference_condition=reference_condition, sim_exp=sim_exp,
-                 c_axis_include='modulation_voltage')
+                 c_axis_include='modulation_amplitude')
 
-    AlN_R0_data = sim_exp.data['REFL2~material=AlN~modulation_voltage=0V~spectra=R0']
+    AlN_R0_data = sim_exp.data['REFL2~material=AlN~spectra=R0']
     R0_fig_desired = Figure()
     R0_ax = R0_fig_desired.subplots()
     R0_ax.plot([850, 1150], [0.026106, 0.283228])
@@ -365,25 +366,23 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
     R0_ax.set_ylabel(r'$R_0$')
     R0_ax.set_xlim(880, 1100)
 
-    AlN_dR_data = sim_exp.data['REFL2~material=AlN~modulation_voltage=10V~spectra=deltaR']
-    # NOTE - This is the pk-pk data for 10V amplitude. To convert to rms,
-    # We need only to divide by 2 * sqrt(2)
-    AlN_dR_data['R'] /= (2 * np.sqrt(2))
+    # NOTE - This data is for a 5V *amplitude* sinewave. 
+    AlN_dR_data = sim_exp.data['REFL2~material=AlN~modulation_amplitude=5V~spectra=dR']
+    AlN_dR_data_10 = sim_exp.data['REFL2~material=AlN~modulation_amplitude=10V~spectra=dR']
 
     dR_fig_desired = Figure()
     dR_ax = dR_fig_desired.subplots()
     dR_ax.plot([850, 1150],
-            [0.96400635435947 / np.sqrt(2) * dR_R0_ratio,
-            0.975276963043909 / np.sqrt(2) * dR_R0_ratio])
+            [0.96400635435947 * dR_R0_ratio,
+            0.975276963043909 * dR_R0_ratio])
     dR_ax.plot(AlN_dR_data['Wavelength (nm)'].values, AlN_dR_data['R'].values,
             linestyle='dashed')
     dR_ax.plot([850, 1150],
-            [2*0.96400635435947 / np.sqrt(2) * dR_R0_ratio,
-            2*0.975276963043909 / np.sqrt(2) * dR_R0_ratio])
-    dR_ax.plot(AlN_dR_data['Wavelength (nm)'].values, 2*AlN_dR_data['R'].values,
-            linestyle='dashed')
+            [2*0.96400635435947 * dR_R0_ratio,
+            2*0.975276963043909 * dR_R0_ratio])
+    dR_ax.plot(AlN_dR_data['Wavelength (nm)'].values, AlN_dR_data_10['R'].values, linestyle='dashed')
     dR_ax.set_xlabel('wavelength (nm)')
-    dR_ax.set_ylabel(r'$\Delta R_{rms}$')
+    dR_ax.set_ylabel(r'$\Delta R_{amp}$')
     dR_ax.set_xlim(880, 1100)
 
     inoise_fig_desired = Figure()
@@ -400,6 +399,7 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
     inoise_ax_desired.set_xlabel('wavelength (nm)')
     inoise_ax_desired.set_ylabel('Power (dBA/Hz)')
 
-    assert_figures_equal(inoise_figs_actual[1], inoise_fig_desired, atol=1e-6)
-    assert_figures_equal(R0_figs_actual[1], R0_fig_desired, atol=1e-6)
-    assert_figures_equal(dR_figs_actual[1], dR_fig_desired, atol=1e-6)
+    assert_figures_equal(inoise_figs_actual[1], inoise_fig_desired, atol=1e-6, skip='ticks')
+    assert_figures_equal(R0_figs_actual[1], R0_fig_desired, atol=1e-6, skip='ticks')
+    assert_figures_equal(dR_figs_actual[1], dR_fig_desired, atol=1e-6, skip='ticks')
+    breakpoint()

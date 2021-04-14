@@ -1,4 +1,4 @@
-{'resolution': 480, 'frequency': 1.5, 'frequency_width': 2, 'number_frequencies': 200, 'pml_thickness': 4.0, 'film_thickness': 0.291, 'propagation_thickness': 4, 'substrate_index': 3.5, 'substrate_thickness': 2, 'power_decay_target': 1e-09, 'r33': 1e-06, 'd33': 5.1e-06, 'r33_units': 'um/V', 'd33_units': 'um/V', 'thickness_units': 'um', 'film_index': 2.2}
+{'resolution': 480, 'frequency': 1.5, 'frequency_width': 2, 'number_frequencies': 200, 'pml_thickness': 4.0, 'film_thickness': 0.291, 'propagation_thickness': 4, 'substrate_index': 3.5, 'substrate_thickness': 2, 'power_decay_target': 1e-09, 'r33 (µm / V)': 1e-06, 'd33 (µm / V)': 5.1e-06, 'thickness_units': 'micrometer', 'film_index': 2.2}
 Wavelength (nm),R
 500,0.5367301703206168
 501,0.5416777789463532

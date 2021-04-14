@@ -4,7 +4,7 @@ import pandas as pd
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
-from xsugar import Experiment, factors_from_condition
+from xsugar import Experiment, factors_from_condition, get_partial_condition, condition_is_subset
 
 def test_get_conditions(exp, convert_name):
     exp.data = {
@@ -132,18 +132,38 @@ def test_generate_conditions(exp, exp_data):
                                           expected_conds):
         assert_equal(actual_cond, desired_cond)
 
-def test_partial_condition(exp, exp_data):
-    exp.constants = {'hi': 2, 'yo': 4}
-    exp.conditions = [{'hi': 2, 'yo': 4, 'there': 12},
-        {'hi': 4, 'yo': 6, 'there': 7}]
-    desired_condition = {'there': 12}
-    actual_condition = exp.get_partial_condition(exp.conditions[0])
+def test_partial_condition_pass():
+    cond = {'hi': 2, 'yo': 4, 'there': 12}
+    desired_condition = cond
+    actual_condition = get_partial_condition(cond)
     assert_equal(actual_condition, desired_condition)
 
-def test_partial_condition_exclude(exp, exp_data):
-    exp.constants = {'hi': 2, 'yo': 4}
-    exp.conditions = [{'hi': 2, 'yo': 4, 'there': 12, 'swell': 4},
-        {'hi': 4, 'yo': 6, 'there': 7, 'swell': 10}]
+def test_partial_condition_exclude():
+    cond = {'hi': 2, 'yo': 4, 'there': 12}
     desired_condition = {'there': 12}
-    actual_condition = exp.get_partial_condition(exp.conditions[0], exclude_factors=['swell'])
+    actual_condition = get_partial_condition(
+            cond, exclude_factors=['hi', 'yo'])
     assert_equal(actual_condition, desired_condition)
+
+def test_partial_condition_include():
+    cond= {'hi': 2, 'yo': 4, 'there': 12, 'swell': 4}
+    desired_condition = {'there': 12}
+    actual_condition = get_partial_condition(cond, include_factors='there')
+    assert_equal(actual_condition, desired_condition)
+
+def test_condition_is_subset_true():
+    superset_cond = {'hi': 1, 'there': 2}
+    subset_cond = {'hi': 1}
+    is_subset_actual = condition_is_subset(subset_cond, superset_cond)
+    is_subset_desired = True
+    assert_equal(is_subset_actual, is_subset_desired)
+
+def test_condition_is_subset_false():
+    superset_cond = {'hi': 1, 'there': 2}
+    subset_cond = {'hi': 1, 'there': 3}
+    is_subset_actual = condition_is_subset(subset_cond, superset_cond)
+    is_subset_desired = False
+    assert_equal(is_subset_actual, is_subset_desired)
+
+#def test_condition_from_name():
+#name = 'TEST1~wavelength=25~

@@ -9,7 +9,7 @@ from sugarplot import plt, prettifyPlot, default_plotter, power_spectrum_plot, n
 from spectralpy import power_spectrum
 from sciparse import parse_xrd, parse_default, is_scalar, dict_to_string, title_to_quantity, to_standard_quantity, quantity_to_title
 from itertools import permutations
-from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, inoise_func_dBAHz, factors_from_condition
+from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, inoise_func_dBAHz, factors_from_condition, get_partial_condition, condition_is_subset, condition_from_name, match_theory_data
 import copy
 
 class Experiment:
@@ -255,10 +255,6 @@ class Experiment:
         :param condition: Condition to generate name for
         """
         partial_filename = self.name
-        if 'ident' in cond.keys():
-            partial_filename = partial_filename + self.minor_separator + \
-                    cond['ident']
-            cond.pop('ident')
         key_list = list(cond.keys())
         key_list.sort()
         for key in key_list:
@@ -300,41 +296,16 @@ class Experiment:
         of a file. Discards the base name (i.e. LIA1-1).
 
         :param name: filename to generate condition from
+        :param full_condition: Whether to return the condition with metadata + constants, or only the content of the name itself
         """
-        sub_components = name.split(self.major_separator)
-        name_id = sub_components[0].split(self.minor_separator)
-        sub_components = sub_components[1:]
-        cond = {}
-        if len(name_id) > 1: cond.update({'ident': name_id[1]})
-
-        cond.update({sub.split(self.minor_separator)[0]:sub.split(self.minor_separator)[1] \
-                for sub in sub_components})
-        for key, val in cond.items():
-            try:
-                if val == 'c' or val == 'dR':
-                    raise pint.errors.UndefinedUnitError
-                cond[key] = ureg.parse_expression(val)
-            except pint.errors.UndefinedUnitError:
-                cond[key] = val
-        if full_condition:
-            cond.update(self.constants)
-            if name in self.metadata.keys():
-                cond.update(self.metadata[name])
+        cond = condition_from_name(name,
+                minor_separator=self.minor_separator,
+                major_separator=self.major_separator,
+                full_condition=full_condition,
+                constants=self.constants,
+                metadata=self.metadata)
         return cond
 
-    def get_partial_condition(self, cond, exclude_factors=[]):
-        new_cond = copy.copy(cond)
-        if isinstance(exclude_factors, str):
-            exclude_factors = [exclude_factors]
-        for key in cond.keys():
-            if key in self.constants.keys():
-                del new_cond[key]
-        if exclude_factors:
-            for factor in exclude_factors:
-                if factor in new_cond.keys():
-                    del new_cond[factor]
-
-        return new_cond
 
     def derived_quantity(
             self, quantity_func, data_dict=None, quantity_kw={},
@@ -714,8 +685,8 @@ class Experiment:
         self, data_dict=None, average_along=None, sum_along=None,
         quantity_func=None, representative='',
         plotter=default_plotter, line_kw={}, subplot_kw={},
-        theory_func=None, theory_kw={}, theory_data_dict={},
-        theory_data=None,
+        theory_func=None, theory_kw={},
+        theory_data=None, theory_exp=None,
         postfix='', x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[]):
         """
         Generates figures from loaded data.
@@ -786,8 +757,8 @@ class Experiment:
                         c_factor = k
 
                 for inner_name, inner_data in data.items():
-                    if inner_name in theory_data_dict:
-                        theory_data = theory_data_dict[inner_name]
+                    if theory_exp is not None:
+                        theory_data = match_theory_data(inner_name, theory_exp)
                     if not fig:
                         fig, ax = plotter(
                             inner_data, theory_func=theory_func,
@@ -853,10 +824,16 @@ class Experiment:
         """
         if sim_exp is None:
             sim_exp = Experiment(name='REFL2', kind='simulation')
+            sim_exp.loadData()
 
-        sim_exp.loadData()
-        theoretical_Au_R0 = \
-                list(sim_exp.lookup(material='Au').values())[0]
+        potential_reference_data = \
+            list(sim_exp.lookup(material='Au').values())
+        if len(potential_reference_data) == 0:
+            raise ValueError(f'No reference data found for the specified condition: {reference_condition}. Available data names are {sim_exp.data.keys()}')
+        elif len(potential_reference_data) > 1:
+            raise ValueError(f'Reference condition is not unique. Specify a unique reference condition.')
+        elif len(potential_reference_data) == 1:
+            theoretical_Au_R0 = potential_reference_data[0]
 
         reference_photocurrent = self.lookup(**reference_condition)
         reference_photocurrent_dc = self.derived_quantity(
@@ -864,19 +841,17 @@ class Experiment:
                 data_dict=reference_photocurrent)
         reference_photocurrent_table = self.master_data(
                 reference_photocurrent_dc)
-        reference_R0 = normalize_reflectance(
-                reference_photocurrent_table,
-                reference_photocurrent_table,
-                theoretical_Au_R0,
-                column_units=ureg.nm)
 
-        dc_photocurrents = self.master_data(self.derived_quantity(
+        dc_photocurrents_dict = self.derived_quantity(
                 quantity_func=dc_photocurrent,
-                data_dict=self.data
-                ))
-        mod_photocurrents = self.master_data(self.derived_quantity(
+                data_dict=self.data)
+        dc_photocurrents = self.master_data(dc_photocurrents_dict)
+
+        mod_photocurrents_dict = self.derived_quantity(
                 quantity_func=modulated_photocurrent,
-                data_dict=self.data))
+                data_dict=self.data)
+        mod_photocurrents = self.master_data(mod_photocurrents_dict)
+
         R0_table = normalize_reflectance(
                 dc_photocurrents,
                 reference_photocurrent_table,
@@ -886,8 +861,11 @@ class Experiment:
                 mod_photocurrents, reference_photocurrent_table,
                 theoretical_Au_R0, column_units=ureg.nm)
 
+        # We need to explicitly add a "spectra" to the names for dR and R0.
         R0_dict = self.data_from_master(R0_table)
+        R0_dict = {k + '~spectra=R0': v for k, v in R0_dict.items()}
         dR_dict = self.data_from_master(dR_table)
+        dR_dict = {k + '~spectra=dR': v for k, v in dR_dict.items()}
 
         noise_photocurrents_dict = self.derived_quantity(
                 quantity_func=noise_current,
@@ -907,30 +885,7 @@ class Experiment:
         """
         if sim_exp is None:
             sim_exp = Experiment(name='REFL2', kind='simulation')
-        sim_exp.loadData()
-
-        partial_conditions_R0 = [dict(self.get_partial_condition(c,
-                exclude_factors=['wavelength', 'voltage', 'modulation_voltage', 'amplitude']), spectra='R0') for c in self.conditions]
-        partial_conditions_dR = [dict(self.get_partial_condition(
-                   c, exclude_factors=['wavelength']), spectra='deltaR') \
-                   for c in self.conditions]
-
-        full_names = [self.nameFromCondition(dict(c, wavelength='x')) \
-                for c in self.conditions]
-
-        available_R0_data = \
-                [sim_exp.lookup(**c) for c in partial_conditions_R0]
-        available_dR_data = \
-                [sim_exp.lookup(**c) for c in partial_conditions_dR]
-        theory_data_dict_R0 = \
-            {name: list(data.values())[0] for name, data in \
-            zip(full_names, available_R0_data) if data != {}}
-        theory_data_dict_dR = \
-            {name: list(data.values())[0] for name, data in \
-                zip(full_names, available_dR_data) if data != {}}
-
-        for data in theory_data_dict_dR.values():
-            data['R'] /= (2*np.sqrt(2))
+            sim_exp.loadData()
 
         R0_dict, dR_dict, noise_photocurrents_dict = \
                  self.process_photocurrent(
@@ -938,24 +893,32 @@ class Experiment:
                          average_along=average_along,
                          representative=representative, sim_exp=sim_exp)
 
-        R0_figs, R0_axes = self.plot(
-                data_dict=R0_dict,
-                theory_data_dict=theory_data_dict_R0,
-                x_axis_include=x_axis_include,
-                x_axis_exclude=x_axis_exclude,
-                c_axis_include=c_axis_include,
-                c_axis_exclude=c_axis_exclude,
-                subplot_kw={'ylabel': r'$R_0$', 'xlim': (870, 1100)},
-                postfix='R0')
         dR_figs, dR_axes = self.plot(
             data_dict=dR_dict,
-            theory_data_dict=theory_data_dict_dR,
+            theory_exp=sim_exp,
             x_axis_include=x_axis_include,
             x_axis_exclude=x_axis_exclude,
             c_axis_include=c_axis_include,
             c_axis_exclude=c_axis_exclude,
-            subplot_kw={'ylabel': r'$\Delta R_{rms}$', 'xlim': (870, 1100)},
+            subplot_kw={
+                'ylabel': r'$\Delta R_{amp}$',
+                'xlim': (870, 1100),
+                'ylim': (-3e-4, 3e-4),
+                },
             postfix='dR')
+        R0_figs, R0_axes = self.plot(
+                data_dict=R0_dict,
+                theory_exp=sim_exp,
+                x_axis_include=x_axis_include,
+                x_axis_exclude=x_axis_exclude,
+                c_axis_include=c_axis_include,
+                c_axis_exclude=c_axis_exclude,
+                subplot_kw={
+                    'ylabel': r'$R_0$',
+                    'xlim': (870, 1100),
+                    'ylim': (0, 1),
+                    },
+                postfix='R0')
         inoise_figs, inoise_axes = self.plot(
                 data_dict=noise_photocurrents_dict,
                 theory_func=inoise_func_dBAHz,
