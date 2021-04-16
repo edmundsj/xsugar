@@ -402,4 +402,3 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
     assert_figures_equal(inoise_figs_actual[1], inoise_fig_desired, atol=1e-6, skip='ticks')
     assert_figures_equal(R0_figs_actual[1], R0_fig_desired, atol=1e-6, skip='ticks')
     assert_figures_equal(dR_figs_actual[1], dR_fig_desired, atol=1e-6, skip='ticks')
-    breakpoint()

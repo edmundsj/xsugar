@@ -856,10 +856,11 @@ class Experiment:
                 dc_photocurrents,
                 reference_photocurrent_table,
                 theoretical_Au_R0,
-                column_units=ureg.nm)
+                column_units=ureg.nm, target_units=ureg.nA)
         dR_table = normalize_reflectance(
                 mod_photocurrents, reference_photocurrent_table,
-                theoretical_Au_R0, column_units=ureg.nm)
+                theoretical_Au_R0,
+                column_units=ureg.nm, target_units=ureg.nA)
 
         # We need to explicitly add a "spectra" to the names for dR and R0.
         R0_dict = self.data_from_master(R0_table)
