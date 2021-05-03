@@ -23,13 +23,13 @@ def modulated_photocurrent(data, cond):
     return extracted_current
 
 def noise_current(data, cond):
-    data_power = power_spectrum(data)
+    data_power = power_spectrum(data, window='boxcar')
     column_name = cname_from_unit(data_power, ureg.Hz)
     if 'filter_cutoff' in cond:
         filter_cutoff = cond['filter_cutoff'].to(ureg.Hz).magnitude
     else:
         filter_cutoff = 200 # Default to 200Hz
-    filtered_power = data_power[data_power[column_name] > filter_cutoff]
+    filtered_power = data_power[data_power[column_name] >= filter_cutoff]
     average_noise_power= \
         column_from_unit(filtered_power, ureg.V ** 2).mean()
     bin_size = frequency_bin_size(filtered_power)

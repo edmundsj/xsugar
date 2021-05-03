@@ -76,10 +76,10 @@ def test_noise_current():
     actual_noise_current_psd = noise_current(data, cond)
     assert_allclose_qt(
             actual_noise_current_psd, desired_noise_current_psd,
-            atol=1e-31, rtol=1e-2)
+            atol=1e-31, rtol=5e-2)
 
 def test_noise_current_bin2():
-    data_length = 3000
+    data_length = 30000
     sampling_frequency = 10*ureg.kHz
     sampling_period = (1 / sampling_frequency).to(ureg.s)
     noise_voltage = np.random.normal(size=data_length)*ureg.uV
@@ -100,7 +100,7 @@ def test_noise_current_bin2():
     actual_noise_current_psd = noise_current(data, cond)
     assert_allclose_qt(
             actual_noise_current_psd, desired_noise_current_psd,
-            atol=1e-30, rtol=2e-2)
+            atol=1e-30, rtol=5e-2)
 
 def test_process_photocurrent_simple(convert_name, sim_exp):
     """
@@ -114,11 +114,12 @@ def test_process_photocurrent_simple(convert_name, sim_exp):
     dR_R0_ratio = current_amplitude / current_offset
 
     reference_condition = dict(material='Au')
+    # Ensures no spectral leakage for simple test case
     sin_data = pd.DataFrame({
-            'Time (ms)': np.array([0, 1, 2, 3, 4]),
+            'Time (ms)': np.array([0, 1, 2, 3, 4, 5, 6, 7]),
             'Voltage (mV)': current_offset + \
-                current_amplitude * np.array([0, -1, 0, 1, 0]),
-            'Sync': np.array([1, 0, 0, 0, 1]),
+                current_amplitude * np.array([0, -1, 0, 1, 0, -1, 0, 1]),
+            'Sync': np.array([1, 0, 0, 0, 1, 0, 0, 0]),
             })
     test_data = {
         convert_name('TEST1~material=Au~wavelength=700nm'): sin_data,
@@ -151,13 +152,13 @@ def test_process_photocurrent_simple(convert_name, sim_exp):
     }
     inoise_desired = {
         convert_name('TEST1~material=Au~wavelength=700nm'): \
-            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+            1.3333333333333333e-21 * ureg.A ** 2 / ureg.Hz,
         convert_name('TEST1~material=Al~wavelength=700nm'): \
-            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+            1.3333333333333333e-21 * ureg.A ** 2 / ureg.Hz,
         convert_name('TEST1~material=Au~wavelength=750nm'): \
-            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+            1.3333333333333333e-21 * ureg.A ** 2 / ureg.Hz,
         convert_name('TEST1~material=Al~wavelength=750nm'): \
-            8.000000000000231e-22 * ureg.A ** 2 / ureg.Hz,
+            1.3333333333333333e-21 * ureg.A ** 2 / ureg.Hz,
     }
     assertDataDictEqual(R0_actual, R0_desired)
     assertDataDictEqual(dR_actual, dR_desired)
@@ -176,11 +177,10 @@ def test_plot_photocurrent_simple(convert_name, sim_exp):
 
     reference_condition = dict(material='Au')
     sin_data = pd.DataFrame({
-            'Time (ms)': np.array([0, 1, 2, 3, 4]),
-            'Voltage (mV)': current_offset.to(ureg.nA).m + \
-                current_amplitude.to(ureg.nA).m * \
-                np.array([0, -1, 0, 1, 0]),
-            'Sync': np.array([1, 0, 0, 0, 1]),
+            'Time (ms)': np.array([0, 1, 2, 3, 4, 5, 6, 7]),
+            'Voltage (mV)': current_offset + \
+                current_amplitude * np.array([0, -1, 0, 1, 0, -1, 0, 1]),
+            'Sync': np.array([1, 0, 0, 0, 1, 0, 0, 0]),
             })
     test_data = {
         convert_name('TEST1~wavelength=700nm~material=Au'): sin_data,
@@ -243,11 +243,11 @@ def test_plot_photocurrent_simple(convert_name, sim_exp):
     inoise_fig_desired = Figure()
     inoise_ax_desired = inoise_fig_desired.subplots()
     inoise_ax_desired.plot([700, 750],
-            [-250.9691, -250.9691])
+            [-248.750613, -248.750613])
     inoise_ax_desired.plot([700, 750],
             [-257.8073547127414, -257.8073547127414], linestyle='dashed')
     inoise_ax_desired.plot([700, 750],
-            [-250.9691, -250.9691])
+            [-248.750613, -248.750613])
     inoise_ax_desired.plot([700, 750],
             [-257.8073547127414, -257.8073547127414], linestyle='dashed')
 
@@ -388,11 +388,11 @@ def test_plot_photocurrent_realistic(convert_name, sim_exp):
     inoise_fig_desired = Figure()
     inoise_ax_desired = inoise_fig_desired.subplots()
     inoise_ax_desired.plot([850, 1150],
-            [-250.9691, -250.9691])
+            [-250, -250])
     inoise_ax_desired.plot([850, 1150],
             [-257.8073547127414, -257.8073547127414], linestyle='dashed')
     inoise_ax_desired.plot([850, 1150],
-            [-244.9485, -244.9485])
+            [-243.9794, -243.9794])
     inoise_ax_desired.plot([850, 1150],
             [-257.8073547127414, -257.8073547127414], linestyle='dashed')
 

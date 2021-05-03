@@ -614,8 +614,8 @@ class Experiment:
                      for desired_cond in kwargs.keys()])
 
             if contains_required_keys:
-                contains_required_values = \
-                        all([cond[k] == v for k, v in kwargs.items()])
+                matched_vals = [cond[k] == v for k, v in kwargs.items()]
+                contains_required_values = all(matched_vals)
                 if contains_required_values:
                     return_dict[name] = val
 
@@ -904,7 +904,7 @@ class Experiment:
             subplot_kw={
                 'ylabel': r'$\Delta R_{amp}$',
                 'xlim': (870, 1100),
-                'ylim': (-3e-4, 3e-4),
+                'ylim': (-4e-4, 4e-4),
                 },
             postfix='dR')
         R0_figs, R0_axes = self.plot(
