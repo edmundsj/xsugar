@@ -50,6 +50,7 @@ class Experiment:
         else:
             self.data_full_path = self.base_path + '/data/' + kind + '/' + name + '/'
             self.figures_full_path = self.base_path + '/figures/' + kind + '/' + name + '/'
+            self.process_full_path = self.base_path + '/processing_code/' + kind + '/'
         self.factors = {k:v for k, v in kwargs.items() \
              if isinstance(v, (list, np.ndarray))}
         for k, v in kwargs.items():
@@ -684,7 +685,7 @@ class Experiment:
     def plot(
         self, data_dict=None, average_along=None, sum_along=None,
         quantity_func=None, representative='',
-        plotter=default_plotter, line_kw={}, subplot_kw={},
+        plotter=default_plotter, line_kw={}, subplot_kw={}, save_kw = {},
         theory_func=None, theory_kw={},
         theory_data=None, theory_exp=None,
         postfix='', x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[]):
@@ -698,6 +699,8 @@ class Experiment:
         :param theory_func: Theoretical values the data should take. Assumes a function of the form y = f(x, kwargs).
         :param theory_kw: Parameters to feed into theory function. Assumed to be a single dict.
         :param theory_data: Theoretical data as a Pandas DataFrame to be plotted along with the data.
+        :param subplot_kw: Keyword arguments to be passed to fig.subplots()
+        :param save_kw: Keyword arguments to be passed to fig.savefig()
         :param x_axis_include: List of factors, will include only plots which have the x-axes specified
         :param x_axis_exclude: List of factors for which you do not want to be plotted on the x-axis
         :param c_axis_include: Complete list of factors for which you want to generate c-axis plots
@@ -795,11 +798,14 @@ class Experiment:
                 plotted_figs.append(fig)
                 plotted_axes.append(ax)
 
+            extension = '.png'
+            if 'format' in save_kw:
+                extension = '.' + save_kw['format']
             if postfix != '':
                 full_filename = self.figures_full_path + name + \
-                        self.major_separator + postfix + '.png'
+                        self.major_separator + postfix + extension
             else:
-                full_filename = self.figures_full_path + name + '.png'
+                full_filename = self.figures_full_path + name + extension
 
             prettifyPlot(fig=fig,ax=ax)
             fig.savefig(full_filename, bbox_inches='tight')
@@ -813,6 +819,13 @@ class Experiment:
             average_along=average_along,
             quantity_func=psdFunction, plotter=power_spectrum_plot,
             representative=representative, postfix='PSD')
+
+    def process(self):
+        """
+        Execute the script with the same name located in the processing code directory.
+        """
+        file_contents = open(self.process_full_path + self.name + '.py').read()
+        exec(file_contents)
 
     def process_photocurrent(
             self, reference_condition, average_along=None, representative=False, sim_exp=None):

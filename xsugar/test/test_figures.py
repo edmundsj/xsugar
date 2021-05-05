@@ -83,6 +83,22 @@ def testGenerateTimeDomainPlot(exp, path_data, convert_name):
     file_found = os.path.isfile(path_data['figures_full_path'] + filename_desired)
     assert_equal(file_found, True)
 
+def test_plot_time_domain_pdf(exp, path_data, convert_name):
+    """
+    Tests that we successfully create a simple figure from a single pandas
+    array.
+    """
+    raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                             'Current (mV)': [4,4.5,6]})
+    cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
+    condition_name = convert_name('TEST1~wavelengths-1~temperatures-25_replicate-1')
+    filename_desired = condition_name + '.pdf'
+    exp.data = {condition_name: raw_data}
+    exp.plot(save_kw={'format': 'pdf'})
+    file_found = os.path.isfile(path_data['figures_full_path'] + filename_desired)
+    assert_equal(file_found, True)
+
+
 def testGenerateRepresentativePlot(exp, path_data, convert_name):
     """
     Tests that we successfully create a single figure from a whole set of

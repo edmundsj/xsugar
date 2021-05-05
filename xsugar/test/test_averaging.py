@@ -188,3 +188,5 @@ def testExtractDerivedQuantityPSDAverage(exp, convert_name):
         data_dict=data_dict, quantity_func=powerSpectrum,
         average_along='replicate')
     assertDataDictEqual(actual_data_dict, desired_data_dict)
+
+#def test_derived_quantity_multiple(exp, convert_name):
