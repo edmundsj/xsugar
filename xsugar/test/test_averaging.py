@@ -125,27 +125,27 @@ def test_sum_data_pandas(exp,
     assert_frame_equal(summed_data_actual.iloc[1, 0],
             summed_data_desired.iloc[1, 0])
 
-def test_derived_quantity_mean(exp, convert_name):
+def test_derived_quantity_scalar(exp, data_2x2_scalar):
+    def multiply_func(data, cond):
+        return data * 2
+
+    actual_quantities = exp.derived_quantity(quantity_func=multiply_func,
+            data=data_2x2_scalar)
+    desired_quantities = data_2x2_scalar * 2
+    assert_frame_equal(actual_quantities, desired_quantities)
+
+def test_derived_quantity_pandas(exp, data_2x2_pandas):
     """
     Attempst to extract the mean from a set of data
     """
-    fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [0.5, 0.6, 0.7]})
-    fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [1, 1.2, 1.4]})
-    mean_data_1 = np.float64(0.6)
-    mean_data_2 = np.float64(1.2)
-    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
-    desired_quantities = {name_1: mean_data_1, name_2: mean_data_2}
-    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
-
-    def getPhotocurrentMean(pandas_dict, cond):
-        return np.mean(pandas_dict['Photocurrent (nA)'].values)
+    def getPhotocurrentMean(pandas_frame, cond):
+        return np.mean(pandas_frame['Photocurrent (nA)'].values)
 
     actual_quantities = exp.derived_quantity(
-        data_dict=data_dict, quantity_func=getPhotocurrentMean,
+        data=data_2x2_pandas, quantity_func=getPhotocurrentMean,
         average_along=None)
 
+    breakpoint()
     assertDataDictEqual(actual_quantities, desired_quantities)
 
 def test_derived_quantity_sum(exp, convert_name):

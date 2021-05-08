@@ -312,7 +312,7 @@ class Experiment:
         return cond
 
     def derived_quantity(
-            self, quantity_func, data_=None, quantity_kw={},
+            self, quantity_func, data=None, quantity_kw={},
             average_along=None, sum_along=None):
         """
         Extracts derived quantities from a named dictionary of data with some
@@ -327,12 +327,18 @@ class Experiment:
         if data is None:
             data = self.data
 
-        # Need to figure out how to iterate through our new data. Row-by-row?
+        # Need to figure out how to iterate through our new data.
+        # Row-by-row? I might have to write my own iterator for this.
+        # This is the last challenging method we need to figure out
+        # and then everything else should just *work*
         derived_data = pd.DataFrame()
-        for name, data in data.items():
+        conds = self.get_conditions(data)
+        for (ind, data), cond in zip(data.groupby(data.index), conds):
+            breakpoint()
             quantity = quantity_func(data, dict(cond, **quantity_kw))
-            derived_dict[name] = quantity
+            derived_data[ind] = quantity
 
+        # This part is done
         if average_along is not None:
             derived_dict = self.mean(
                 data=derived_data, average_along=along,
