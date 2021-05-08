@@ -88,7 +88,6 @@ def test_average_data_pandas(exp,
     averaged_data_actual = exp.mean(
             data=data_2x2_pandas,
             average_along='temperature')
-    breakpoint()
     assert_frame_equal(averaged_data_actual, averaged_data_desired)
 
 def test_sum_data_pandas(exp, convert_name):
@@ -117,7 +116,7 @@ def test_average_data_unsupported(exp):
         averaged_data_actual = exp.average_data(
                 average_along='replicate', averaging_type='YOLO')
 
-def testExtractDerivedQuantityMean(exp, convert_name):
+def test_derived_quantity_mean(exp, convert_name):
     """
     Attempst to extract the mean from a set of data
     """
@@ -165,7 +164,7 @@ def test_derived_quantity_sum(exp, convert_name):
 
     assertDataDictEqual(actual_quantities, desired_quantities)
 
-def testExtractDerivedQuantityPSD(exp, convert_name):
+def test_derived_quantity_psd(exp, convert_name):
     """
     Attempts to extract the PSD from a set of data
     """
@@ -185,7 +184,7 @@ def testExtractDerivedQuantityPSD(exp, convert_name):
                         name_2: power_spectrum(fudge_data_2)}
     assertDataDictEqual(actual_psd_data, desired_psd_data)
 
-def testExtractDerivedQuantityPSDAverage(exp, convert_name):
+def test_derived_quantity_psd_average(exp, convert_name):
     fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [0.5, 0.6, 0.7]})
     fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
@@ -208,4 +207,4 @@ def testExtractDerivedQuantityPSDAverage(exp, convert_name):
         average_along='replicate')
     assertDataDictEqual(actual_data_dict, desired_data_dict)
 
-#def test_derived_quantity_multiple(exp, convert_name):
+# TODO: Derived quantities where we have arrays instead of DataFrames or scalars.

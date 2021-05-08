@@ -313,30 +313,35 @@ class Experiment:
 
 
     def derived_quantity(
-            self, quantity_func, data_dict=None, quantity_kw={},
-            along=None, sum_along=None):
+            self, quantity_func, data_=None, quantity_kw={},
+            average_along=None, sum_along=None):
         """
         Extracts derived quantities from a named dictionary of data with some
         arbitrary input functioin, and optional averaging along an arbitrary
         axis.
 
-        :param data_dict: Named data dictionary from which to extract derived quantities
+        :param data: data from which to extract derived quantities
         :param quantity_func: Function to apply to generate data
         :param quantity_kw: Additional keyword arguments to be passed into the quantity function on top of the condition.
         :param along: Axis to average along (i.e. replicate or None)
         """
-        if data_dict is None:
-            data_dict = self.data
+        if data is None:
+            data = self.data
 
-        derived_dict = {}
-        for name, data in data_dict.items():
-            cond = self.conditionFromName(name)
+        # Need to figure out how to iterate through our new data. Row-by-row?
+        breakpoint()
+        derived_data = pd.DataFrame()
+        for name, data in data.items():
             quantity = quantity_func(data, dict(cond, **quantity_kw))
             derived_dict[name] = quantity
 
-        if along is not None or sum_along is not None:
-            derived_dict = self.average_data(
-                data_dict=derived_dict, along=along,
+        if average_along is not None:
+            derived_dict = self.mean(
+                data=derived_data, average_along=along,
+                sum_along=sum_along)
+        if sum_along is not None:
+            derived_dict = self.sum(
+                data=derived_data, average_along=along,
                 sum_along=sum_along)
         return derived_dict
 
@@ -527,7 +532,6 @@ class Experiment:
         names_for_index.remove(along)
         grouped_data = data.groupby(names_for_index)
         first_value = grouped_data.first().values[0,0]
-        breakpoint()
         if is_scalar(first_value):
             averaged_data = grouped_data.mean()
         elif isinstance(first_value, pd.DataFrame):

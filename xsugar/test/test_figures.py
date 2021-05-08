@@ -12,18 +12,27 @@ from xsugar import Experiment, ureg
 from sugarplot import assert_figures_equal, prettifyPlot
 from ast import literal_eval
 
-def testSavePSDFigureFilename(exp, path_data, convert_name):
+@pytest.fixture
+def photovoltage_data():
+    raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                             'Current (mV)': [4,4.5,6]})
+    index = pd.MultiIndex.from_arrays([[1], [25]],
+            names=['wavelength', 'temperature'])
+    data = pd.DataFrame(index=index,
+            data={'series': [raw_data]})
+    yield data
+
+
+def testSavePSDFigureFilename(exp, photovoltage_data, convert_name):
     """
     Tests that we successfully created and saved a single PSD figure when
     our dataset is just a single item.
     """
-    raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                             'Current (mV)': [4,4.5,6]})
-    cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name = convert_name('TEST1~temperatures=25~wavelengths=1')
-    filename_desired = condition_name + '~PSD.png'
-    exp.data = {condition_name: raw_data}
-    exp.plotPSD(average_along=None)
+    exp.metadata = {'frequency': 8500}
+    exp.data = photovoltage_data
+    filename_desired = convert_name('TEST1~temperatures=25~wavelengths=1')
+    filename_desired = filename_desired + '~PSD.png'
+    exp.plotPSD()
     file_found = os.path.isfile(path_data['figures_full_path'] + filename_desired)
     assert_equal(file_found, True)
 
