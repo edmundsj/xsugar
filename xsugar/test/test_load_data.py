@@ -98,21 +98,32 @@ def testLoadMetadata(exp, exp_data, convert_name):
 # TODO: ADD TEST CASE TO ENSURE WE DON'T LOAD IN TOO MUCH DATA, OR DATA
 # THAT DOES NOT PRECISELY MATCH *BOTH* THE NAME *AND* THE ID.
 
-def testLookup(exp, convert_name):
+def test_lookup_scalar(exp, convert_name):
     fudge_data = pd.DataFrame(
-        {'Time (ms)': [1, 2, 3],
-        'Voltage (V)': [0,0.1, 0.2]})
-    exp.data = {
-        convert_name('TEST1~wavelengths-1~temperatures-25'):fudge_data,
-        convert_name('TEST1~wavelengths-2~temperatures-25'):fudge_data,
-        convert_name('TEST1~wavelengths-2~temperatures-35'):fudge_data,
-        convert_name('TEST1~wavelengths-2~temperatures-35'):fudge_data,
-                    }
-    data_actual = exp.lookup(temperatures=25)
-    data_desired = {
-        convert_name('TEST1~wavelengths-1~temperatures-25'):fudge_data,
-        convert_name('TEST1~wavelengths-2~temperatures-25'):fudge_data,}
-    assertDataDictEqual(data_actual, data_desired)
+        index=pd.Index([1, 2, 3], name='wavelength'),
+        data={'Voltage (V)': [0,0.1, 0.2]})
+
+    data_actual = exp.lookup(fudge_data, wavelength=1)
+    data_desired = pd.DataFrame(
+        index=pd.Index([1], name='wavelength'),
+        data={'Voltage (V)': [0.0]})
+    assert_frame_equal(data_actual, data_desired)
+
+def test_lookup_pandas(exp, convert_name):
+    internal_data = pd.DataFrame(
+            {'Time (ms)': [0, 1, 2],
+            'Voltage (V)': [0, 1, 0]})
+    full_data = pd.DataFrame(
+        index=pd.Index([1, 2, 3], name='wavelength'),
+        data={'photovoltage':
+            [internal_data, internal_data, internal_data]})
+
+    data_actual = exp.lookup(full_data, wavelength=1)
+    data_desired = pd.DataFrame(
+        index=pd.Index([1], name='wavelength'),
+        data={'photovoltage':
+            [internal_data]})
+    assert_frame_equal(data_actual, data_desired)
 
 def test_load_conditions(exp, exp_data, convert_name):
     """

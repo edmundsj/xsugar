@@ -1,6 +1,37 @@
 from xsugar import ureg
 import copy
 import pint
+import numpy as np
+import pandas as pd
+
+def is_collection(x):
+    is_iterable = hasattr(x, '__iter__')
+    if isinstance(x, str):
+        is_iterable = False
+    return is_iterable
+
+def remove_duplicates(x):
+    if isinstance(x, (list, np.ndarray)):
+        return_vals = []
+        for item in x:
+            if item not in return_vals:
+                return_vals.append(item)
+    elif isinstance(x, pd.Index):
+        first_val = x[0]
+        redundant_indices = np.ones(len(first_val), dtype=bool)
+        for tup in x:
+            for i, (v1, v2) in enumerate(zip(tup, first_val)):
+                if v1 != v2:
+                    redundant_indices[i] = False
+        new_index = x
+        reversed_i = [i for i in range(len(redundant_indices))]
+        reversed_i.reverse()
+        for i, val in zip(reversed_i, np.flip(redundant_indices)):
+            if val == True:
+                new_index = new_index.droplevel(i)
+        return_vals = new_index
+
+    return return_vals
 
 def factors_from_condition(cond):
     factors = [x for x in cond.keys()]
@@ -66,3 +97,17 @@ def condition_from_name(
         if name in metadata.keys():
             cond.update(metadata[name])
     return cond
+
+def conditions_from_index(index):
+    conds = []
+    cond_names = index.names
+    cond_val_pairs = index.values
+    for cond_val_pair in cond_val_pairs:
+        if len(cond_names) > 1:
+            cond = {k: v for k, v in zip(cond_names, cond_val_pair)}
+        else:
+            cond = {cond_names[0]: cond_val_pair}
+        conds.append(cond)
+    if len(conds) == 0:
+        raise ValueError(f'No conditions could be found from index {index}')
+    return conds

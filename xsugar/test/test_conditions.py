@@ -4,16 +4,47 @@ import pandas as pd
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
-from xsugar import Experiment, factors_from_condition, get_partial_condition, condition_is_subset
+from pandas.testing import assert_index_equal
+from xsugar import Experiment, factors_from_condition, get_partial_condition, condition_is_subset, conditions_from_index, remove_duplicates
 
-def test_get_conditions(exp, convert_name):
-    exp.data = {
-        convert_name('TEST1~wavelength-1~temperature-25'): None,
-        convert_name('TEST1~wavelength-2~temperature-25'): None,
-        convert_name('TEST1~wavelength-3~temperature-25'): None,
-        convert_name('TEST1~wavelength-1~temperature-35'): None,
-        convert_name('TEST1~wavelength-2~temperature-35'): None,
-        convert_name('TEST1~wavelength-3~temperature-35'): None,}
+@pytest.fixture
+def wav_temp_index():
+    pairs = [(1, 25), (2, 25), (3, 25), (1, 35), (2, 35), (3, 35)]
+    index = pd.MultiIndex.from_tuples(pairs, names=('wavelength', 'temperature'))
+    yield index
+
+@pytest.fixture
+def wav_temp_data(wav_temp_index):
+    data = pd.DataFrame(index=wav_temp_index,
+            data={'current (nA)': [0, 1, 2, 3, 4, 5]})
+    yield data
+
+
+def test_conditions_from_index(convert_name):
+    pairs = [(1, 25), (2, 25), (3, 25), (1, 35), (2, 35), (3, 35)]
+    index = pd.MultiIndex.from_tuples(pairs, names=('wavelength', 'temperature'))
+    desired_conditions = [
+        {'wavelength': 1, 'temperature': 25},
+        {'wavelength': 2, 'temperature': 25},
+        {'wavelength': 3, 'temperature': 25},
+        {'wavelength': 1, 'temperature': 35},
+        {'wavelength': 2, 'temperature': 35},
+        {'wavelength': 3, 'temperature': 35},
+    ]
+    actual_conditions = conditions_from_index(index)
+    assert_equal(actual_conditions, desired_conditions)
+
+def test_condition_from_index_single():
+    index = pd.Index([1, 2], name='wavelength')
+    actual_conditions = conditions_from_index(index)
+    desired_conditions = [
+        {'wavelength': 1},
+        {'wavelength': 2}
+    ]
+    assert_equal(actual_conditions, desired_conditions)
+
+def test_get_conditions(exp, wav_temp_data):
+    exp.data = wav_temp_data
     desired_conditions = [
         {'wavelength': 1, 'temperature': 25},
         {'wavelength': 2, 'temperature': 25},
@@ -25,36 +56,12 @@ def test_get_conditions(exp, convert_name):
     actual_conditions = exp.get_conditions()
     assert_equal(actual_conditions, desired_conditions)
 
-def test_get_conditions_exclude(exp, convert_name):
-    exp.data = {
-        convert_name('TEST1~wavelength-1~temperature-25'): None,
-        convert_name('TEST1~wavelength-2~temperature-25'): None,
-        convert_name('TEST1~wavelength-3~temperature-25'): None,
-        convert_name('TEST1~wavelength-1~temperature-35'): None,
-        convert_name('TEST1~wavelength-2~temperature-35'): None,
-        convert_name('TEST1~wavelength-3~temperature-35'): None,}
+def test_get_conditions_exclude_single(exp, wav_temp_data):
+    exp.data = wav_temp_data
     desired_conditions = [
         {'wavelength': 1},
         {'wavelength': 2},
         {'wavelength': 3},
-    ]
-    actual_conditions = exp.get_conditions(exclude='temperature')
-    assert_equal(actual_conditions, desired_conditions)
-
-def test_get_conditions_exclude_uneven(exp, convert_name):
-    exp.data = {
-        convert_name('TEST1~wavelength-1~temperature-25'): None,
-        convert_name('TEST1~wavelength-2~temperature-25'): None,
-        convert_name('TEST1~wavelength-3~temperature-25'): None,
-        convert_name('TEST1~wavelength-1~temperature-35'): None,
-        convert_name('TEST1~wavelength-2~temperature-35'): None,
-        convert_name('TEST1~wavelength-3~temperature-35'): None,
-        convert_name('TEST1~wavelength-4~temperature-35'): None,}
-    desired_conditions = [
-        {'wavelength': 1},
-        {'wavelength': 2},
-        {'wavelength': 3},
-        {'wavelength': 4},
     ]
     actual_conditions = exp.get_conditions(exclude='temperature')
     assert_equal(actual_conditions, desired_conditions)
@@ -165,5 +172,11 @@ def test_condition_is_subset_false():
     is_subset_desired = False
     assert_equal(is_subset_actual, is_subset_desired)
 
-#def test_condition_from_name():
-#name = 'TEST1~wavelength=25~
+def test_remove_duplicate_indices():
+    index_tuples = ((1, 25), (1, 35))
+    duplicate_index = pd.MultiIndex.from_tuples(index_tuples, names=['wavelength', 'temperature'])
+
+    desired_tuples = ((25,), (35,))
+    desired_index = pd.Index([25, 35], name='temperature')
+    actual_index = remove_duplicates(duplicate_index)
+    assert_index_equal(actual_index, desired_index)

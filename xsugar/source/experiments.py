@@ -10,6 +10,7 @@ from spectralpy import power_spectrum
 from sciparse import parse_xrd, parse_default, is_scalar, dict_to_string, title_to_quantity, to_standard_quantity, quantity_to_title
 from itertools import permutations
 from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, inoise_func_dBAHz, factors_from_condition, get_partial_condition, condition_is_subset, condition_from_name, match_theory_data
+from xsugar import conditions_from_index, remove_duplicates, is_collection
 import copy
 
 class Experiment:
@@ -146,6 +147,7 @@ class Experiment:
             raise ValueError(f'Cannot save data type {type(raw_data)}. Can only currently handle types of float, int, and pd.DataFrame')
         print(f'Results saved to {full_filename}')
 
+    # This will be replaced with simple multi-indexing. No need for any craziness.
     def generate_conditions(self, comb_type='cartesian', **factors):
         """
         Generates a list of desired conditions from the specified factors and their levels.
@@ -161,7 +163,7 @@ class Experiment:
         for i, val in enumerate(vals):
             if is_scalar(val) or isinstance(val, str):
                 vals[i] = [val]
-        if comb_type == 'cartesian':
+        if comb_type == 'cartesian': # replace with pd.MultiIndex.from_product
             for cond in itertools.product(*vals):
                 iterable_cond = dict(zip(keys, cond))
                 full_cond = dict(iterable_cond, **self.constants)
@@ -208,7 +210,7 @@ class Experiment:
         self.conditions[insertion_location:insertion_location] = \
              extra_conds
 
-    def get_conditions(self, data_dict=None, exclude=[]):
+    def get_conditions(self, data=None, exclude=[], full_condition=True):
         """
         Get all the conditions from a given set of data
 
@@ -217,20 +219,22 @@ class Experiment:
         :param include: The complete list of factors you want included
         :returns conds: A list of conditions that match the inclusion and exclusion criteria
         """
-        if not data_dict:
-            data_dict = self.data
+        if data is None:
+            data = self.data
         if isinstance(exclude, str):
             exclude = [exclude]
-        conds = [self.conditionFromName(name, full_condition=False) \
-            for name in data_dict.keys()]
+        conds = conditions_from_index(data.index)
 
         for cond in conds:
             for factor in exclude:
                 cond.pop(factor, None) # Remove the condition
+        conds = remove_duplicates(conds)
 
-        return_conds = []
-        [return_conds.append(c) for c in conds if c not in return_conds]
-        return return_conds
+        if full_condition == True:
+            for cond in conds:
+                cond.update(self.metadata)
+
+        return conds
 
     def drop_name(self, name):
         return name.replace(self.name + self.major_separator, '')
@@ -310,7 +314,7 @@ class Experiment:
 
     def derived_quantity(
             self, quantity_func, data_dict=None, quantity_kw={},
-            average_along=None, sum_along=None):
+            along=None, sum_along=None):
         """
         Extracts derived quantities from a named dictionary of data with some
         arbitrary input functioin, and optional averaging along an arbitrary
@@ -319,7 +323,7 @@ class Experiment:
         :param data_dict: Named data dictionary from which to extract derived quantities
         :param quantity_func: Function to apply to generate data
         :param quantity_kw: Additional keyword arguments to be passed into the quantity function on top of the condition.
-        :param average_along: Axis to average along (i.e. replicate or None)
+        :param along: Axis to average along (i.e. replicate or None)
         """
         if data_dict is None:
             data_dict = self.data
@@ -330,9 +334,9 @@ class Experiment:
             quantity = quantity_func(data, dict(cond, **quantity_kw))
             derived_dict[name] = quantity
 
-        if average_along is not None or sum_along is not None:
+        if along is not None or sum_along is not None:
             derived_dict = self.average_data(
-                data_dict=derived_dict, average_along=average_along,
+                data_dict=derived_dict, along=along,
                 sum_along=sum_along)
         return derived_dict
 
@@ -379,156 +383,46 @@ class Experiment:
     def loadXRDData(self):
         self.loadData(parser=parse_xrd)
 
-    def generate_groups(self, data_dict=None, group_along='replicate', grouping_type='name'):
+    def group_data(self, data=None, group_along='replicate', grouping_type='name'):
         """
-        Generates unique groups for grouping data data by condition which have different replicates but the some condition otherwise
+        Generates unique groups for grouping data data by condition which have identical conditions except for one factor
 
-        :param data_dict: Dictionary of named data for which to generate groups
+        :param data: Dictionary of named data for which to generate groups
         :param group_along: Condition name that the data should be grouped by
         :param grouping_type: "name" or "value". Allows generation of groups into groups which have the same condition and run over one final condition, or groups which vary the value of a single condition.
         :returns groups: List of conditions without the group_along part
         """
-        if data_dict == None:
-            data_dict = self.data
+        if data is None:
+            data = self.data
         if group_along == None:
-            return data_dict
-        names = [name for name in data_dict.keys()]
-        conds = [self.conditionFromName(name, full_condition=False) \
-                for name in names]
+            return data
+        conds = conditions_from_index(data.index)
+
+        if grouping_type == 'value':
+            grouping_names = group_along
+        elif grouping_type == 'name':
+            grouping_names = list(data.index.names)
+            grouping_names.remove(group_along)
+            if len(grouping_names) == 1:
+                grouping_names = grouping_names[0]
+
         groups = {}
-        for cond, cond_name in zip(conds, names):
-            if group_along in cond.keys():
-
-                if grouping_type == 'name':
-                    group_conditions = {k: cond[k] for k in cond.keys() if k != group_along}
-                elif grouping_type == 'value':
-                    group_conditions = {group_along: cond[group_along]}
-                else:
-                    raise ValueError(f'grouping_type must be "name" or "value". Found {grouping_type}')
-
-                group_name = self.nameFromCondition(group_conditions)
-                if group_name not in groups.keys():
-                    groups[group_name] = {}
-                groups[group_name][cond_name] = None
+        groupby_object = data.groupby(grouping_names)
+        for ind, val in groupby_object:
+            if is_collection(grouping_names):
+                cond = {k: v for k, v in zip(grouping_names, ind)}
+            else:
+                cond = {grouping_names: ind}
+            name = self.nameFromCondition(cond)
+            groups[name] = val
 
         if groups == {}:
             raise ValueError(f'No groups found for group_along={group_along}')
         return groups
 
-    def group_data(self, data_dict=None, group_along=None,
-            grouping_type='name'):
-        """
-        Groups data by name (i.e. fix the condition and vary one of the values in that condition) or by value (fix a single factor of the condition and vary its values, including all other combinations).
-
-        """
-        if data_dict == None:
-            data_dict = self.data
-        if group_along == None:
-            return data_dict
-        groups = self.generate_groups(
-                data_dict=data_dict, group_along=group_along,
-                grouping_type=grouping_type)
-        grouped_data = groups.copy()
-
-        for group_name, group in grouped_data.items():
-            for name in group.keys():
-                grouped_data[group_name][name] = data_dict[name]
-
-        return grouped_data
-
-    def master_data(self, data_dict=None, value_name='Value'):
-        """
-        NOTE: Currently only designed for data_dicts with scalar values. Not design for data frames or multi-valued datasets. I need to fix this.
-
-        """
-        if not data_dict:
-            data_dict = self.data
-
-        return_frame = pd.DataFrame()
-        if self.measure_func:
-            value_name = self.measure_name
-
-        for name in data_dict.keys():
-            cond = self.conditionFromName(name, full_condition=False)
-            new_row = pd.DataFrame()
-            for k, v in cond.items():
-                if isinstance(v, pint.Quantity):
-                    row_title = quantity_to_title(
-                            v, name=k)
-                    row_value = v.magnitude
-                else:
-                    row_title = k
-                    row_value = v
-                new_row[row_title] = [row_value]
-            quantity_value = data_dict[name]
-            if isinstance(quantity_value, pint.Quantity):
-                row_title = quantity_to_title(
-                        quantity_value,
-                        name=self.measure_name)
-                row_value = quantity_value.magnitude
-            else:
-                row_title = value_name
-                row_value = quantity_value
-
-            new_row[row_title] = row_value
-            new_row.index = [len(return_frame)]
-            return_frame = return_frame.append(new_row)
-
-        new_return_frame = return_frame.copy()
-        for i, col in enumerate(return_frame.columns.values):
-            if all(return_frame[col][0] == return_frame[col]) and \
-                     len(return_frame) != 1 and \
-                    i != len(return_frame.columns) -1:
-                new_return_frame = new_return_frame.drop(col, axis=1)
-
-        return new_return_frame
-
-    def data_from_master(self, master_data):
-        """
-        Converts data from a master data table into a dictionary
-
-        :param master_data: Master dataset as a pandas dataframe
-        """
-        if not isinstance(master_data, pd.DataFrame):
-             raise ValueError(f"Unspported data type {type(master_data)}. Can only support pandas DataFrame")
-
-        col_names = master_data.columns.values
-        col_mapping = {}
-        col_units = []
-        for col in col_names:
-            col_substrings = col.split(' ')
-            base_name = col_substrings[0]
-            col_mapping[col] = base_name
-            if len(col_substrings) > 1:
-                unit_substring = col_substrings[1]
-                col_units.append(
-                      ureg.parse_expression(unit_substring))
-            else:
-                col_units.append(1)
-
-        master_data = master_data.rename(columns=col_mapping)
-
-        data_last = master_data.iloc[:,-1]
-        data_without_last = master_data.iloc[:,:-1]
-
-        data_dict = {}
-        for tuple_row, (ind, regular_row) in \
-            zip(master_data.itertuples(index=False), master_data.iterrows()):
-
-            reduced_names = regular_row.index[:-1]
-            reduced_values, last_val = \
-                list(tuple_row)[:-1], list(tuple_row)[-1]
-            reduced_values = [v * unit for v, unit in \
-                             zip(reduced_values, col_units)]
-
-            cond = {cname: val for cname, val in \
-                zip(reduced_names, reduced_values)}
-            name = self.nameFromCondition(cond)
-            data_dict[name] = last_val * col_units[-1]
-
-        return data_dict
-
-    def master_data_dict(self, data_dict=None, x_axis_include=[], x_axis_exclude=[], c_axis_include=[], c_axis_exclude=[]):
+    def master_data_dict(self, data=None,
+            x_axis_include=[], x_axis_exclude=[],
+            c_axis_include=[], c_axis_exclude=[]):
         """
         Assumes the last final value is the one to be plotted, all
         others are variables we want to plot over.
@@ -537,17 +431,17 @@ class Experiment:
         :param x_axis_include: List of factors, will include only plots which have the x-axes specified
         :param c_axis_include: List of factors, will include only plots which have curve families equal to these factors
         """
-        if not data_dict:
-            data_dict = self.data
+        if data is None:
+            data = self.data
 
         master_dict = {}
-        conds = [self.nameToCondition(x, full_condition=False) \
-            for x in data_dict.keys()]
+        conds = self.get_conditions(data=data, full_condition=False)
+
         factors = factors_from_condition(conds[0])
 
         if len(factors) == 1: # Special case - no pairs of data
-            single_table = self.master_data(data_dict)
-            single_name = self.nameFromCondition({factors[0]: 'all'})
+            single_table = data
+            single_name = self.nameFromCondition({factors[0]: 'x'})
             return {single_name: single_table}
 
 
@@ -569,16 +463,15 @@ class Experiment:
             x_factor, c_factor = factor_pair
             remaining_factors = \
                     [x for x in factors if x not in factor_pair]
-            full_conditions = self.get_conditions(
-                    data_dict)
+            full_conditions = self.get_conditions(data)
             conditions_excluding_pairs = self.get_conditions(
-                    data_dict, exclude=factor_pair)
+                    data, exclude=factor_pair)
 
             if len(conditions_excluding_pairs) == 0:
                 conditions_excluding_pairs = [{}]
 
             for cond in conditions_excluding_pairs:
-                relevant_data = self.lookup(data_dict, **cond)
+                relevant_data = self.lookup(data, **cond)
                 partial_cond = dict(cond, **{x_factor: 'x', c_factor: 'c'})
                 curve_family_name = self.nameFromCondition(partial_cond)
                 master_dict[curve_family_name] = {}
@@ -591,99 +484,87 @@ class Experiment:
                     full_cond = dict(partial_cond,
                             **self.conditionFromName(k))
                     full_name = self.nameFromCondition(full_cond)
-                    data_table = self.master_data(v)
-                    column_hits = [x_factor in col for col in data_table.columns]
-                    x_column_name = data_table.columns[column_hits][0]
-                    data_table.sort_values(
-                            x_column_name, inplace=True,
-                            ignore_index=True)
+                    data_table = v
+                    sorted_index = data_table.index.sort_values(x_factor)[0]
+                    new_vals = list(sorted_index.values)
+                    data_table = data_table.loc[new_vals]
+                    new_index = remove_duplicates(sorted_index)
+                    data_table.index = new_index
+
                     master_dict[curve_family_name][full_name] = data_table
 
         return master_dict
 
-    def lookup(self, data_dict=None, **kwargs):
+    def lookup(self, data=None, **kwargs):
         """
         Looks up data based on a particular condition or set of conditions
         """
-        if data_dict==None:
-            data_dict = self.data
-        return_dict = {}
-        for name, val in data_dict.items():
-            cond = self.conditionFromName(name)
-            contains_required_keys = \
-                all([desired_cond in cond.keys() \
-                     for desired_cond in kwargs.keys()])
+        if data is None:
+            data = self.data
+        column_truth_values = np.ones(len(data), dtype=bool)
+        for k, v in kwargs.items():
+            try:
+                new_truth= np.array(data.index.get_level_values(k) == v)
+                column_truth_values = np.logical_and(
+                        column_truth_values, new_truth)
+            except KeyError:
+                pass
 
-            if contains_required_keys:
-                matched_vals = [cond[k] == v for k, v in kwargs.items()]
-                contains_required_values = all(matched_vals)
-                if contains_required_values:
-                    return_dict[name] = val
+        return data.loc[column_truth_values]
 
-        return return_dict
-
-    def average_data(self, data_dict=None, average_along=None, averaging_type='first', sum_along=None):
+    def mean(self, data=None, along=None, averaging_type='first'):
         """
         User-facing function to average existing data along some axis
 
-        :param data_dict: Data dict to average
-        :param average_along: The axis to average the data along
+        :param along: The axis to average the data along
+        :param data: Data to average
         :param averaging_type: (if Pandas DataFrame) whether to average the last column only ("last") or all columns but the first column ("first")
         """
-        if sum_along is not None and average_along is None:
-            average_along = sum_along
-            summing = True
+        if data is None:
+            data = self.data
+
+        names_for_index = list(data.index.names)
+        names_for_index.remove(along)
+        grouped_data = data.groupby(names_for_index)
+        first_value = grouped_data.first().values[0,0]
+        breakpoint()
+        if is_scalar(first_value):
+            averaged_data = grouped_data.mean()
+        elif isinstance(first_value, pd.DataFrame):
+            averaged_data = average_nested_group(grouped_data)
         else:
-            summing = False
+            raise ValueError(f'value type you are trying to average is {type(first_value)}. Unsupported type')
 
-        if data_dict == None:
-            data_dict = self.data
-        grouped_data = self.group_data(
-            data_dict=data_dict, group_along=average_along,
-            grouping_type='name')
-        averaged_data = {}
+        return averaged_data
 
-        for group_name, group in grouped_data.items():
-            first_name  = list(group.keys())[0]
-            first_item = list(group.values())[0]
-            is_pandas = isinstance(first_item, pd.DataFrame)
-            data_is_scalar = is_scalar(first_item)
-            N_items = len(group)
+    def sum(self, data=None, along=None, summing_type='first'):
+        """
+        User-facing function to average existing data along some axis
 
-            if is_pandas:
-                averaged_data[group_name] = first_item.copy()
-                if averaging_type == 'last':
-                    for data in group.values():
-                        averaged_data[group_name].iloc[:,-1] += data.iloc[:,-1]
-                    averaged_data[group_name].iloc[:,-1] -= first_item.iloc[:,-1]
-                    if not summing:
-                        averaged_data[group_name].iloc[:,-1] /= N_items
+        :param along: The axis to average the data along
+        :param data: Data to average
+        :param averaging_type: (if Pandas DataFrame) whether to average the last column only ("last") or all columns but the first column ("first")
+        """
+        if data is None:
+            data = self.data
 
-                elif averaging_type == 'first':
-                    for data in group.values():
-                        averaged_data[group_name].iloc[:,1:] += data.iloc[:, 1:]
-                    averaged_data[group_name].iloc[:,1:] -= first_item.iloc[:,1:]
-                    if not summing:
-                        averaged_data[group_name].iloc[:,1:] /= N_items
-                else:
-                     raise ValueError(f'Averaging type {averaging_type} not recognized. Available types are "first" and "last"')
-
-            elif data_is_scalar:
-                averaged_data[group_name] = first_item
-                for data in group.values():
-                    averaged_data[group_name] += data
-                averaged_data[group_name] -= first_item
-                if not summing:
-                    averaged_data[group_name] /= N_items
-            else:
-                raise ValueError(f'type {type(first_item)} not supported. Available types are scalar, Pandas Array')
+        names_for_index = list(data.index.names)
+        names_for_index.remove(along)
+        grouped_data = data.groupby(names_for_index)
+        first_value = grouped_data.first().values[0,0]
+        if is_scalar(first_value):
+            averaged_data = grouped_data.sum()
+        elif isinstance(first_value, pd.DataFrame):
+            averaged_data = sum_nested_group(grouped_data)
+        else:
+            raise ValueError(f'value type you are trying to average is {type(first_value)}. Unsupported type')
 
         return averaged_data
 
     # This function is a mess. It needs to be split up into smaller functions. One for legend generation, one for data preparation, etc.
     # that have a clearly-delineated purpose.
     def plot(
-        self, data_dict=None, average_along=None, sum_along=None,
+        self, data_dict=None, along=None, sum_along=None,
         quantity_func=None, representative='',
         plotter=default_plotter, line_kw={}, subplot_kw={}, save_kw = {},
         theory_func=None, theory_kw={},
@@ -692,7 +573,7 @@ class Experiment:
         """
         Generates figures from loaded data.
 
-        :param average_along: Averages the data along a given axis (i.e. the repilate axis)
+        :param along: Averages the data along a given axis (i.e. the repilate axis)
         :param quantity_func: Quantity function to extract a quantity from a given dataset or transform that dataset
         :param fig_ax_func: Function to generate fig, ax
         :param representative: Which axis to generate a representative plot along (i.e. "replicate". Defaults to None)
@@ -708,7 +589,7 @@ class Experiment:
         """
         plotted_figs = []
         plotted_axes = []
-        if average_along is not None:
+        if along is not None:
             if postfix != '': postfix += self.major_separator
             postfix += 'averaged'
         if sum_along is not None:
@@ -729,7 +610,7 @@ class Experiment:
             dict_to_plot = self.derived_quantity(
                 quantity_func=quantity_func,
                 data_dict=data_dict,
-                average_along=average_along,
+                along=along,
                 sum_along=sum_along)
         else:
             dict_to_plot = data_dict
@@ -812,11 +693,11 @@ class Experiment:
         return plotted_figs, plotted_axes
 
     def plotPSD(
-            self, average_along=None, representative=False, **kwargs):
+            self, along=None, representative=False, **kwargs):
         def psdFunction(data, cond):
             return power_spectrum(data, **kwargs)
         self.plot(
-            average_along=average_along,
+            along=along,
             quantity_func=psdFunction, plotter=power_spectrum_plot,
             representative=representative, postfix='PSD')
 
@@ -828,7 +709,7 @@ class Experiment:
         exec(file_contents)
 
     def process_photocurrent(
-            self, reference_condition, average_along=None, representative=False, sim_exp=None):
+            self, reference_condition, along=None, representative=False, sim_exp=None):
         """
         Generates derived quantities for photocurrent given measured
         voltages, system gain, sampling frequency, etc.
@@ -889,7 +770,7 @@ class Experiment:
         return (R0_dict, dR_dict, noise_photocurrents_dict)
 
     def plot_photocurrent(
-            self, reference_condition, average_along=None,
+            self, reference_condition, along=None,
             representative=False, sim_exp=None,
             x_axis_include=['wavelength'],
             c_axis_include=[], x_axis_exclude=[], c_axis_exclude=[]):
@@ -904,7 +785,7 @@ class Experiment:
         R0_dict, dR_dict, noise_photocurrents_dict = \
                  self.process_photocurrent(
                          reference_condition=reference_condition,
-                         average_along=average_along,
+                         along=along,
                          representative=representative, sim_exp=sim_exp)
 
         dR_figs, dR_axes = self.plot(

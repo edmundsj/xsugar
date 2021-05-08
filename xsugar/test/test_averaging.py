@@ -15,65 +15,84 @@ from spectralpy import power_spectrum
 from sciparse import assertDataDictEqual
 
 @pytest.fixture
+def data_2x2_scalar():
+    wavelengths = [1, 2]
+    temperatures = [25, 50]
+    index = pd.MultiIndex.from_product([wavelengths, temperatures],
+            names=['wavelength', 'temperature'])
+    data = pd.DataFrame(index=index,data={'value': [1, 2, 3, 4]})
+    yield data
+
+@pytest.fixture
+def data_2x2_averaged_scalar():
+    wavelengths = [1, 2]
+    index = pd.Index(wavelengths ,name='wavelength')
+    data = pd.DataFrame(index=index,data={'value': [1.5, 3.5]})
+    yield data
+
+@pytest.fixture
+def data_2x2_pandas():
+    wavelengths = [1, 2]
+    temperatures = [25, 50]
+    index = pd.MultiIndex.from_product([wavelengths, temperatures],
+            names=['wavelength', 'temperature'])
+    inner_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [1, 2, 3]})
+    inner_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [2, 3, 4]})
+    data = pd.DataFrame(index=index,
+            data={'series':
+                [inner_data_1, inner_data_2,
+                inner_data_1, inner_data_2]})
+    yield data
+
+@pytest.fixture
+def data_2x2_pandas_averaged():
+    wavelengths = [1, 2]
+    index = pd.Index(wavelengths, name='wavelength')
+    averaged_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [0.75, 0.9, 1.05]})
+    data = pd.DataFrame(index=index,
+            data={'series': [averaged_data, averaged_data]})
+    yield data
+
+@pytest.fixture
 def exp(path_data):
-    wavelengths = np.array([1, 2, 3])
-    temperatures = np.array([25, 50])
     frequency = 8500
     exp = Experiment(name='TEST1', kind='test',
-                     frequency=frequency,
-                     wavelengths=wavelengths,
-                     temperatures=temperatures)
+                     frequency=frequency)
     yield exp
     rmtree(path_data['data_base_path'], ignore_errors=True)
     rmtree(path_data['figures_base_path'], ignore_errors=True)
     rmtree(path_data['designs_base_path'], ignore_errors=True)
 
-def test_average_data_scalar(exp, convert_name):
-    fudge_data_1 = 2.0
-    fudge_data_2 = 3.0
-    averaged_data = 2.5
-    condition_1 = {'frequency': 8500,
-                   'wavelength': 1,
-                   'replicate': 0}
-    condition_2 = {'frequency': 8500,
-                   'wavelength': 1,
-                   'replicate': 1}
-    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
-    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
-    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
-    group_name = convert_name('TEST1~wavelength-1')
+def test_average_data_scalar(exp,
+        data_2x2_scalar, data_2x2_averaged_scalar):
+    averaged_data_desired = data_2x2_averaged_scalar
+    averaged_data_actual = exp.mean(
+            data_2x2_scalar, along='temperature')
+    assert_frame_equal(averaged_data_actual, averaged_data_desired)
 
-    averaged_data_desired = {group_name: averaged_data}
-    averaged_data_actual = exp.average_data(data_dict, average_along='replicate')
-    assertDataDictEqual(averaged_data_actual, averaged_data_desired)
+def test_sum_data_scalar(exp,
+        data_2x2_scalar, data_2x2_averaged_scalar):
+    averaged_data_desired = data_2x2_averaged_scalar * 2
+    averaged_data_actual = exp.sum(
+            data_2x2_scalar, along='temperature') * 1.0
+    assert_frame_equal(averaged_data_actual, averaged_data_desired)
 
-def test_average_data_pandas(exp, convert_name):
-    fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [0.5, 0.6, 0.7]})
-    fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [1, 1.2, 1.4]})
-    averaged_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [0.75, 0.9, 1.05]})
-    condition_1 = {'frequency': 8500,
-                   'wavelength': 1,
-                   'replicate': 0}
-    condition_2 = {'frequency': 8500,
-                   'wavelength': 1,
-                   'replicate': 1}
-    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
-    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
-    group_name = convert_name('TEST1~wavelength-1')
-    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
 
-    averaged_data_desired = {group_name: averaged_data}
-    averaged_data_actual_first = exp.average_data(data_dict,
-            average_along='replicate', averaging_type='first')
-    averaged_data_actual_last = exp.average_data(data_dict,
-            average_along='replicate', averaging_type='last')
-    assertDataDictEqual(averaged_data_actual_first, averaged_data_desired)
-    assertDataDictEqual(averaged_data_actual_last, averaged_data_desired)
+def test_average_data_pandas(exp,
+        data_2x2_pandas, data_2x2_pandas_averaged):
+
+    averaged_data_desired = data_2x2_pandas_averaged
+    averaged_data_actual = exp.mean(
+            data=data_2x2_pandas,
+            average_along='temperature')
+    breakpoint()
+    assert_frame_equal(averaged_data_actual, averaged_data_desired)
 
 def test_sum_data_pandas(exp, convert_name):
+
     fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [0.5, 0.6, 0.7]})
     fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
