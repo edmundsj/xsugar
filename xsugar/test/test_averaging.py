@@ -1,10 +1,16 @@
 """
+@pytest.fixture
+def data_2var_summed():
+    summed_data = pd.DataFrame(
+            data={'Time (ms)': [0, 1, 2],
+            'Current (nA)': [6, 10, 14]})
+    yield summed_data
 Tests data reading and writing operation, along with condition generation
 """
 import pytest
 import numpy as np
 import pandas as pd
-from pandas.testing import assert_frame_equal
+from pandas.testing import assert_frame_equal, assert_index_equal
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
@@ -32,9 +38,9 @@ def data_2x2_averaged_scalar():
 
 @pytest.fixture
 def data_2x2_pandas():
-    wavelengths = [1, 2]
-    temperatures = [25, 50]
-    index = pd.MultiIndex.from_product([wavelengths, temperatures],
+    wavelengths = [1, 1, 2, 2]
+    temperatures = [25, 50, 25, 50]
+    index = pd.MultiIndex.from_arrays([wavelengths, temperatures],
             names=['wavelength', 'temperature'])
     inner_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [1, 2, 3]})
@@ -51,9 +57,19 @@ def data_2x2_pandas_averaged():
     wavelengths = [1, 2]
     index = pd.Index(wavelengths, name='wavelength')
     averaged_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [0.75, 0.9, 1.05]})
+                               'Photocurrent (nA)': [1.5, 2.5, 3.5]})
     data = pd.DataFrame(index=index,
             data={'series': [averaged_data, averaged_data]})
+    yield data
+
+@pytest.fixture
+def data_2x2_pandas_summed():
+    wavelengths = [1, 2]
+    index = pd.Index(wavelengths, name='wavelength')
+    summed_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [3, 5, 7]})
+    data = pd.DataFrame(index=index,
+            data={'series': [summed_data, summed_data]})
     yield data
 
 @pytest.fixture
@@ -80,41 +96,34 @@ def test_sum_data_scalar(exp,
             data_2x2_scalar, along='temperature') * 1.0
     assert_frame_equal(averaged_data_actual, averaged_data_desired)
 
-
 def test_average_data_pandas(exp,
         data_2x2_pandas, data_2x2_pandas_averaged):
 
     averaged_data_desired = data_2x2_pandas_averaged
     averaged_data_actual = exp.mean(
             data=data_2x2_pandas,
-            average_along='temperature')
-    assert_frame_equal(averaged_data_actual, averaged_data_desired)
+            along='temperature')
+    # Need a more elegant way of testing nested frame equality.
+    assert_index_equal(averaged_data_actual.index,
+            averaged_data_desired.index)
+    assert_frame_equal(averaged_data_actual.iloc[0, 0],
+            averaged_data_desired.iloc[0, 0])
+    assert_frame_equal(averaged_data_actual.iloc[1, 0],
+            averaged_data_desired.iloc[1, 0])
 
-def test_sum_data_pandas(exp, convert_name):
+def test_sum_data_pandas(exp,
+        data_2x2_pandas, data_2x2_pandas_summed):
 
-    fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [0.5, 0.6, 0.7]})
-    fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [1, 1.2, 1.4]})
-    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
-    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
+    summed_data_desired = data_2x2_pandas_summed
+    summed_data_actual = exp.sum(
+            data=data_2x2_pandas, along='temperature')
 
-    summed_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [1.5, 1.8, 2.1]})
-
-    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
-
-    group_name = convert_name('TEST1~wavelength-1')
-    summed_data_desired = {group_name: summed_data}
-
-    summed_data_actual = exp.average_data(data_dict,
-            sum_along='replicate')
-    assertDataDictEqual(summed_data_actual, summed_data_desired)
-
-def test_average_data_unsupported(exp):
-    with pytest.raises(ValueError):
-        averaged_data_actual = exp.average_data(
-                average_along='replicate', averaging_type='YOLO')
+    assert_index_equal(summed_data_actual.index,
+            summed_data_desired.index)
+    assert_frame_equal(summed_data_actual.iloc[0, 0],
+            summed_data_desired.iloc[0, 0])
+    assert_frame_equal(summed_data_actual.iloc[1, 0],
+            summed_data_desired.iloc[1, 0])
 
 def test_derived_quantity_mean(exp, convert_name):
     """
@@ -126,7 +135,6 @@ def test_derived_quantity_mean(exp, convert_name):
                                'Photocurrent (nA)': [1, 1.2, 1.4]})
     mean_data_1 = np.float64(0.6)
     mean_data_2 = np.float64(1.2)
-    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
     name_2 = convert_name('TEST1~wavelength-1~replicate-1')
     desired_quantities = {name_1: mean_data_1, name_2: mean_data_2}
     data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}

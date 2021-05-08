@@ -5,7 +5,7 @@ import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
 from pandas.testing import assert_index_equal
-from xsugar import Experiment, factors_from_condition, get_partial_condition, condition_is_subset, conditions_from_index, remove_duplicates
+from xsugar import Experiment, factors_from_condition, get_partial_condition, condition_is_subset, conditions_from_index, drop_redundants
 
 @pytest.fixture
 def wav_temp_index():
@@ -172,11 +172,17 @@ def test_condition_is_subset_false():
     is_subset_desired = False
     assert_equal(is_subset_actual, is_subset_desired)
 
-def test_remove_duplicate_indices():
+def test_remove_duplicate_indices_multi():
     index_tuples = ((1, 25), (1, 35))
     duplicate_index = pd.MultiIndex.from_tuples(index_tuples, names=['wavelength', 'temperature'])
 
     desired_tuples = ((25,), (35,))
     desired_index = pd.Index([25, 35], name='temperature')
-    actual_index = remove_duplicates(duplicate_index)
+    actual_index = drop_redundants(duplicate_index)
+    assert_index_equal(actual_index, desired_index)
+
+def test_remove_duplicate_indices_simple():
+    index = pd.Index([1, 1, 2, 2])
+    desired_index = pd.Index([1, 2])
+    actual_index = drop_redundants(index)
     assert_index_equal(actual_index, desired_index)

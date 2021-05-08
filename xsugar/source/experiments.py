@@ -10,7 +10,7 @@ from spectralpy import power_spectrum
 from sciparse import parse_xrd, parse_default, is_scalar, dict_to_string, title_to_quantity, to_standard_quantity, quantity_to_title
 from itertools import permutations
 from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, inoise_func_dBAHz, factors_from_condition, get_partial_condition, condition_is_subset, condition_from_name, match_theory_data
-from xsugar import conditions_from_index, remove_duplicates, is_collection
+from xsugar import conditions_from_index, drop_redundants, is_collection, average_nested_group, sum_nested_group, simplify_index
 import copy
 
 class Experiment:
@@ -228,7 +228,7 @@ class Experiment:
         for cond in conds:
             for factor in exclude:
                 cond.pop(factor, None) # Remove the condition
-        conds = remove_duplicates(conds)
+        conds = drop_redundants(conds)
 
         if full_condition == True:
             for cond in conds:
@@ -311,7 +311,6 @@ class Experiment:
                 metadata=self.metadata)
         return cond
 
-
     def derived_quantity(
             self, quantity_func, data_=None, quantity_kw={},
             average_along=None, sum_along=None):
@@ -329,7 +328,6 @@ class Experiment:
             data = self.data
 
         # Need to figure out how to iterate through our new data. Row-by-row?
-        breakpoint()
         derived_data = pd.DataFrame()
         for name, data in data.items():
             quantity = quantity_func(data, dict(cond, **quantity_kw))
@@ -493,7 +491,7 @@ class Experiment:
                     sorted_index = data_table.index.sort_values(x_factor)[0]
                     new_vals = list(sorted_index.values)
                     data_table = data_table.loc[new_vals]
-                    new_index = remove_duplicates(sorted_index)
+                    new_index = drop_redundants(sorted_index)
                     data_table.index = new_index
 
                     master_dict[curve_family_name][full_name] = data_table
@@ -517,6 +515,60 @@ class Experiment:
 
         return data.loc[column_truth_values]
 
+    def _mean_sum(self, operation, data=None, along=None,
+            averaging_type='first'):
+        """
+        User-facing function to average existing data along some axis
+
+        :param along: The axis to average the data along
+        :param data: Data to average
+        :param averaging_type: (if Pandas DataFrame) whether to average the last column only ("last") or all columns but the first column ("first")
+        """
+        if data is None:
+            data = self.data
+
+        first_value = data.iloc[0, 0]
+        all_but_along = list(data.index.names)
+        all_but_along.remove(along)
+        grouped_data = data.groupby(all_but_along)
+        if is_scalar(first_value):
+            if operation == 'mean':
+                return_data = grouped_data.mean()
+            elif operation == 'sum':
+                return_data = grouped_data.sum()
+        elif isinstance(first_value, pd.DataFrame):
+            # Need to somehow turn this into a new data frame
+            # Where the indices exclude the column we averaged along
+            return_index_vals = []
+            return_data_vals = []
+
+            for ind, sub_data in grouped_data:
+                if operation == 'mean':
+                    new_data = average_nested_group(sub_data,
+                            averaging_type=averaging_type)
+                elif operation == 'sum':
+                    new_data = sum_nested_group(sub_data,
+                            summing_type=averaging_type)
+
+                return_data_vals.append(new_data)
+                if is_collection(ind):
+                    return_index_vals.append(tuple(ind))
+                else:
+                    return_index_vals.append((ind,))
+
+            data_name = grouped_data.first().columns.values[0]
+            return_index = pd.MultiIndex.from_tuples(
+                    return_index_vals,
+                    names=all_but_along)
+            return_index = simplify_index(return_index)
+            return_values = {data_name: return_data_vals}
+            return_data = pd.DataFrame(index=return_index,
+                    data=return_values)
+        else:
+            raise ValueError(f'value type you are trying to average is {type(first_value)}. Unsupported type')
+
+        return return_data
+
     def mean(self, data=None, along=None, averaging_type='first'):
         """
         User-facing function to average existing data along some axis
@@ -525,23 +577,11 @@ class Experiment:
         :param data: Data to average
         :param averaging_type: (if Pandas DataFrame) whether to average the last column only ("last") or all columns but the first column ("first")
         """
-        if data is None:
-            data = self.data
+        return_data = self._mean_sum(operation='mean', data=data,
+                along=along, averaging_type=averaging_type)
+        return return_data
 
-        names_for_index = list(data.index.names)
-        names_for_index.remove(along)
-        grouped_data = data.groupby(names_for_index)
-        first_value = grouped_data.first().values[0,0]
-        if is_scalar(first_value):
-            averaged_data = grouped_data.mean()
-        elif isinstance(first_value, pd.DataFrame):
-            averaged_data = average_nested_group(grouped_data)
-        else:
-            raise ValueError(f'value type you are trying to average is {type(first_value)}. Unsupported type')
-
-        return averaged_data
-
-    def sum(self, data=None, along=None, summing_type='first'):
+    def sum(self, data=None, along=None, averaging_type='first'):
         """
         User-facing function to average existing data along some axis
 
@@ -549,21 +589,9 @@ class Experiment:
         :param data: Data to average
         :param averaging_type: (if Pandas DataFrame) whether to average the last column only ("last") or all columns but the first column ("first")
         """
-        if data is None:
-            data = self.data
-
-        names_for_index = list(data.index.names)
-        names_for_index.remove(along)
-        grouped_data = data.groupby(names_for_index)
-        first_value = grouped_data.first().values[0,0]
-        if is_scalar(first_value):
-            averaged_data = grouped_data.sum()
-        elif isinstance(first_value, pd.DataFrame):
-            averaged_data = sum_nested_group(grouped_data)
-        else:
-            raise ValueError(f'value type you are trying to average is {type(first_value)}. Unsupported type')
-
-        return averaged_data
+        return_data = self._mean_sum(operation='sum', data=data,
+                along=along, averaging_type=averaging_type)
+        return return_data
 
     # This function is a mess. It needs to be split up into smaller functions. One for legend generation, one for data preparation, etc.
     # that have a clearly-delineated purpose.
