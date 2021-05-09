@@ -8,6 +8,11 @@ def is_collection(x):
     is_iterable = hasattr(x, '__iter__')
     if isinstance(x, str):
         is_iterable = False
+    if isinstance(x, pint.Quantity):
+        try:
+            len(x)
+        except:
+            is_iterable = False
     return is_iterable
 
 def drop_redundants(x):

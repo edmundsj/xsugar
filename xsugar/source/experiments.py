@@ -10,7 +10,7 @@ from spectralpy import power_spectrum
 from sciparse import parse_xrd, parse_default, is_scalar, dict_to_string, title_to_quantity, to_standard_quantity, quantity_to_title
 from itertools import permutations
 from xsugar import ureg, dc_photocurrent, modulated_photocurrent, noise_current, inoise_func_dBAHz, factors_from_condition, get_partial_condition, condition_is_subset, condition_from_name, match_theory_data
-from xsugar import conditions_from_index, drop_redundants, is_collection, average_nested_group, sum_nested_group, simplify_index
+from xsugar import conditions_from_index, drop_redundants, is_collection, average_group, sum_group, simplify_index
 import copy
 
 class Experiment:
@@ -311,44 +311,6 @@ class Experiment:
                 metadata=self.metadata)
         return cond
 
-    def derived_quantity(
-            self, quantity_func, data=None, quantity_kw={},
-            average_along=None, sum_along=None):
-        """
-        Extracts derived quantities from a named dictionary of data with some
-        arbitrary input functioin, and optional averaging along an arbitrary
-        axis.
-
-        :param data: data from which to extract derived quantities
-        :param quantity_func: Function to apply to generate data
-        :param quantity_kw: Additional keyword arguments to be passed into the quantity function on top of the condition.
-        :param along: Axis to average along (i.e. replicate or None)
-        """
-        if data is None:
-            data = self.data
-
-        # Need to figure out how to iterate through our new data.
-        # Row-by-row? I might have to write my own iterator for this.
-        # This is the last challenging method we need to figure out
-        # and then everything else should just *work*
-        derived_data = pd.DataFrame()
-        conds = self.get_conditions(data)
-        for (ind, data), cond in zip(data.groupby(data.index), conds):
-            breakpoint()
-            quantity = quantity_func(data, dict(cond, **quantity_kw))
-            derived_data[ind] = quantity
-
-        # This part is done
-        if average_along is not None:
-            derived_dict = self.mean(
-                data=derived_data, average_along=along,
-                sum_along=sum_along)
-        if sum_along is not None:
-            derived_dict = self.sum(
-                data=derived_data, average_along=along,
-                sum_along=sum_along)
-        return derived_dict
-
     def saveMasterData(self, data_dict=None):
         """
         Saves the derived quantities in master_data to a file with the name of the experiment
@@ -521,7 +483,9 @@ class Experiment:
 
         return data.loc[column_truth_values]
 
-    def _mean_sum(self, operation, data=None, along=None,
+    # This should be generalized into our derived quantity function. This is so close to being our derived quantity function.
+    def derived_quantity(self, data=None, average_along=None,
+            sum_along=None, quantity_func=None,
             averaging_type='first'):
         """
         User-facing function to average existing data along some axis
@@ -534,46 +498,59 @@ class Experiment:
             data = self.data
 
         first_value = data.iloc[0, 0]
-        all_but_along = list(data.index.names)
-        all_but_along.remove(along)
-        grouped_data = data.groupby(all_but_along)
-        if is_scalar(first_value):
-            if operation == 'mean':
-                return_data = grouped_data.mean()
-            elif operation == 'sum':
-                return_data = grouped_data.sum()
-        elif isinstance(first_value, pd.DataFrame):
-            # Need to somehow turn this into a new data frame
-            # Where the indices exclude the column we averaged along
-            return_index_vals = []
-            return_data_vals = []
 
-            for ind, sub_data in grouped_data:
-                if operation == 'mean':
-                    new_data = average_nested_group(sub_data,
-                            averaging_type=averaging_type)
-                elif operation == 'sum':
-                    new_data = sum_nested_group(sub_data,
-                            summing_type=averaging_type)
+        if quantity_func is not None:
+            groups = data.index
+            quantity_first = True
+        elif quantity_func is None:
+            quantity_first = False
+            if average_along is not None:
+                groups = list(data.index.names)
+                groups.remove(average_along)
+                quantity_func = average_group
+                quantity_kw = {'averaging_type': averaging_type}
+            elif sum_along is not None:
+                groups = list(data.index.names)
+                groups.remove(sum_along)
+                quantity_func = sum_group
+                quantity_kw = {'summing_type': averaging_type}
 
-                return_data_vals.append(new_data)
-                if is_collection(ind):
-                    return_index_vals.append(tuple(ind))
-                else:
-                    return_index_vals.append((ind,))
 
-            data_name = grouped_data.first().columns.values[0]
-            return_index = pd.MultiIndex.from_tuples(
-                    return_index_vals,
-                    names=all_but_along)
-            return_index = simplify_index(return_index)
-            return_values = {data_name: return_data_vals}
-            return_data = pd.DataFrame(index=return_index,
-                    data=return_values)
-        else:
-            raise ValueError(f'value type you are trying to average is {type(first_value)}. Unsupported type')
+        return_index_vals = []
+        return_data_vals = []
 
-        return return_data
+        grouped_data = data.groupby(groups)
+        for ind, sub_data in grouped_data:
+            new_data = quantity_func(sub_data, **quantity_kw)
+
+            return_data_vals.append(new_data)
+            if is_collection(ind):
+                return_index_vals.append(tuple(ind))
+            else:
+                return_index_vals.append((ind,))
+
+        data_name = grouped_data.first().columns.values[0]
+        return_index = pd.MultiIndex.from_tuples(
+                return_index_vals,
+                names=groups)
+        return_index = simplify_index(return_index)
+        return_values = {data_name: return_data_vals}
+        derived_data = pd.DataFrame(index=return_index,
+                data=return_values)
+
+        if quantity_first == True:
+            if average_along is not None:
+                derived_data = average_group(derived_data,
+                        average_along=average_along,
+                        averaging_type=averaging_type)
+            elif sum_along is not None:
+                derived_data = sum_group(derived_data,
+                        sum_along=sum_along,
+                        summing_type=averaging_type)
+            else:
+                raise ValueError(f'value type you are trying to average is {type(first_value)}. Unsupported type')
+
+        return derived_data
 
     def mean(self, data=None, along=None, averaging_type='first'):
         """
@@ -583,8 +560,9 @@ class Experiment:
         :param data: Data to average
         :param averaging_type: (if Pandas DataFrame) whether to average the last column only ("last") or all columns but the first column ("first")
         """
-        return_data = self._mean_sum(operation='mean', data=data,
-                along=along, averaging_type=averaging_type)
+        return_data = self.derived_quantity(data=data,
+                average_along=along, averaging_type=averaging_type,
+                quantity_func=None)
         return return_data
 
     def sum(self, data=None, along=None, averaging_type='first'):
@@ -595,8 +573,10 @@ class Experiment:
         :param data: Data to average
         :param averaging_type: (if Pandas DataFrame) whether to average the last column only ("last") or all columns but the first column ("first")
         """
-        return_data = self._mean_sum(operation='sum', data=data,
-                along=along, averaging_type=averaging_type)
+        return_data = self.derived_quantity(data=data,
+                sum_along=along,
+                averaging_type=averaging_type,
+                quantity_func=None)
         return return_data
 
     # This function is a mess. It needs to be split up into smaller functions. One for legend generation, one for data preparation, etc.

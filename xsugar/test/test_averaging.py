@@ -145,7 +145,6 @@ def test_derived_quantity_pandas(exp, data_2x2_pandas):
         data=data_2x2_pandas, quantity_func=getPhotocurrentMean,
         average_along=None)
 
-    breakpoint()
     assertDataDictEqual(actual_quantities, desired_quantities)
 
 def test_derived_quantity_sum(exp, convert_name):
@@ -216,3 +215,4 @@ def test_derived_quantity_psd_average(exp, convert_name):
     assertDataDictEqual(actual_data_dict, desired_data_dict)
 
 # TODO: Derived quantities where we have arrays instead of DataFrames or scalars.
+
