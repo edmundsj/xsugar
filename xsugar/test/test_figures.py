@@ -30,29 +30,26 @@ def testSavePSDFigureFilename(exp, photovoltage_data, convert_name):
     """
     exp.metadata = {'frequency': 8500}
     exp.data = photovoltage_data
-    filename_desired = convert_name('TEST1~temperatures=25~wavelengths=1')
+    filename_desired = convert_name('TEST1~temperature=c~wavelength=x')
     filename_desired = filename_desired + '~PSD.png'
-    exp.plotPSD()
-    file_found = os.path.isfile(path_data['figures_full_path'] + filename_desired)
+    exp.plotPSD(x_axis_include='wavelength')
+    file_found = os.path.isfile(exp.figures_full_path + filename_desired)
+    breakpoint()
     assert_equal(file_found, True)
 
-def testSavePSDFigureMultipleFilename(exp, path_data, convert_name):
+def testSavePSDFigureMultipleFilename(exp, photovoltage_data, convert_name):
     """
     Tests that we successfully created and saved a single PSD figure when
     our dataset is just a single item.
     """
-    raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                             'Current (mV)': [4,4.5,6]})
-    cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name_1 = convert_name('TEST1~replicate=0~temperatures=25~wavelengths=1')
-    condition_name_2 = convert_name('TEST1~replicate=1~temperatures=25~wavelengths=1')
-    filename_desired_1 = condition_name_1 + '~PSD.png'
-    filename_desired_2 = condition_name_2 + '~PSD.png'
-    exp.data = {condition_name_1: raw_data, condition_name_2: raw_data}
-    exp.plotPSD(average_along=None)
-    file1_found = os.path.isfile(path_data['figures_full_path'] +
+    filename_desired_1 = \
+         convert_name('TEST1~temperature=c~wavelength=x~PSD.png')
+    filename_desired_2 = \
+        convert_name('TEST1~temperature=x~wavelength=c~PSD.png')
+    exp.plotPSD(data=photovoltage_data, average_along=None)
+    file1_found = os.path.isfile(exp.figures_full_path + \
                                  filename_desired_1)
-    file2_found = os.path.isfile(path_data['figures_full_path'] +
+    file2_found = os.path.isfile(exp.figures_full_path + \
                                  filename_desired_2)
     assert_equal(file1_found, True)
     assert_equal(file2_found, True)

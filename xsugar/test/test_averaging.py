@@ -14,6 +14,7 @@ from pandas.testing import assert_frame_equal, assert_index_equal
 import os
 from shutil import rmtree
 from numpy.testing import assert_equal, assert_allclose
+from sciparse import assert_equal_qt
 from xsugar import Experiment, ureg
 from ast import literal_eval
 from itertools import zip_longest
@@ -50,6 +51,35 @@ def data_2x2_pandas():
             data={'series':
                 [inner_data_1, inner_data_2,
                 inner_data_1, inner_data_2]})
+    yield data
+
+@pytest.fixture
+def data_2x2_pandas_psd():
+    wavelengths = [1, 1, 2, 2]
+    temperatures = [25, 50, 25, 50]
+    index = pd.MultiIndex.from_arrays([wavelengths, temperatures],
+            names=['wavelength', 'temperature'])
+    inner_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [1, 2, 3]})
+    inner_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                               'Photocurrent (nA)': [2, 3, 4]})
+    data = pd.DataFrame(index=index,
+            data={'series':
+                [power_spectrum(inner_data_1),
+                power_spectrum(inner_data_2),
+                power_spectrum(inner_data_1),
+                power_spectrum(inner_data_2)]})
+    yield data
+
+@pytest.fixture
+def data_2x2_pandas_psd_averaged():
+    wavelengths = [1, 2]
+    index = pd.Index(wavelengths, name='wavelength')
+    averaged_data = pd.DataFrame({
+            'frequency (Hz)': [0, 333.333333333333],
+            'power (A ** 2)': 1e-18*np.array([2.166666666666667, 4.333333333333333])})
+    data = pd.DataFrame(index=index,
+            data={'series': [averaged_data, averaged_data]})
     yield data
 
 @pytest.fixture
@@ -126,93 +156,60 @@ def test_sum_data_pandas(exp,
             summed_data_desired.iloc[1, 0])
 
 def test_derived_quantity_scalar(exp, data_2x2_scalar):
-    def multiply_func(data, cond):
+    def multiply_func(data):
         return data * 2
 
-    actual_quantities = exp.derived_quantity(quantity_func=multiply_func,
+    actual_quantities = exp.derived_quantity(
+            quantity_func=multiply_func,
             data=data_2x2_scalar)
     desired_quantities = data_2x2_scalar * 2
     assert_frame_equal(actual_quantities, desired_quantities)
 
-def test_derived_quantity_pandas(exp, data_2x2_pandas):
-    """
-    Attempst to extract the mean from a set of data
-    """
-    def getPhotocurrentMean(pandas_frame, cond):
-        return np.mean(pandas_frame['Photocurrent (nA)'].values)
-
-    actual_quantities = exp.derived_quantity(
-        data=data_2x2_pandas, quantity_func=getPhotocurrentMean,
-        average_along=None)
-
-    assertDataDictEqual(actual_quantities, desired_quantities)
-
-def test_derived_quantity_sum(exp, convert_name):
+def test_derived_quantity_sum_charge(exp, convert_name):
     fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [0.5, 0.6, 0.7]})
     fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
                                'Photocurrent (nA)': [1, 1.2, 1.4]})
 
-    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
-    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
-    group_name = convert_name('TEST1~wavelength-1')
-    desired_quantities = {group_name: 11.400000000000002*ureg.pC}
-    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
+    data = pd.DataFrame(
+            index=pd.Index([0, 1], name='replicate'),
+            data = {'series': [fudge_data_1, fudge_data_2]})
+    desired_quantity = pd.DataFrame(
+            index=pd.Index([0], name='sum_group'),
+            data={'series': [11.400000000000002*ureg.pC]})
 
-    def charge(data, cond):
+    def charge(data):
         charges = data['Photocurrent (nA)'].values* \
             data['Time (ms)'].values*ureg.nA*ureg.ms
         total_charge = charges.sum().to(ureg.pC)
         return total_charge
 
-    actual_quantities = exp.derived_quantity(
-        data_dict=data_dict, quantity_func=charge,
+    actual_quantity = exp.derived_quantity(
+        data=data, quantity_func=charge,
         sum_along='replicate')
 
-    assertDataDictEqual(actual_quantities, desired_quantities)
+    assert_frame_equal(actual_quantity, desired_quantity)
 
-def test_derived_quantity_psd(exp, convert_name):
+def test_derived_quantity_psd_basic(exp, data_2x2_pandas,
+        data_2x2_pandas_psd):
     """
     Attempts to extract the PSD from a set of data
     """
-    fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [0.5, 0.6, 0.7]})
-    fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [1, 1.2, 1.4]})
-    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
-    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
-    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
-
-    def powerSpectrum(data, cond):
-        return power_spectrum(data)
     actual_psd_data = exp.derived_quantity(
-        data_dict=data_dict, quantity_func=powerSpectrum)
-    desired_psd_data = {name_1: power_spectrum(fudge_data_1),
-                        name_2: power_spectrum(fudge_data_2)}
-    assertDataDictEqual(actual_psd_data, desired_psd_data)
+        data=data_2x2_pandas, quantity_func=power_spectrum)
+    desired_psd_data = data_2x2_pandas_psd
+    assert_frame_equal(actual_psd_data, desired_psd_data)
 
-def test_derived_quantity_psd_average(exp, convert_name):
-    fudge_data_1 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [0.5, 0.6, 0.7]})
-    fudge_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                               'Photocurrent (nA)': [1, 1.2, 1.4]})
-    name_1 = convert_name('TEST1~wavelength-1~replicate-0')
-    name_2 = convert_name('TEST1~wavelength-1~replicate-1')
-    data_dict = {name_1: fudge_data_1, name_2: fudge_data_2}
-    data_psd_1 = power_spectrum(fudge_data_1)
-    data_psd_2 = power_spectrum(fudge_data_2)
-    data_psd_1.iloc[:, 1:] += data_psd_2.iloc[:,1:]
-    data_psd_1.iloc[:, 1:] /= 2
+def test_derived_quantity_psd_average(exp, data_2x2_pandas,
+        data_2x2_pandas_psd_averaged):
 
-    def powerSpectrum(data, cond):
-        return power_spectrum(data)
-
-    desired_psd = data_psd_1
-    desired_data_dict = {convert_name('TEST1~wavelength-1'): desired_psd}
-    actual_data_dict = exp.derived_quantity(
-        data_dict=data_dict, quantity_func=powerSpectrum,
-        average_along='replicate')
-    assertDataDictEqual(actual_data_dict, desired_data_dict)
-
-# TODO: Derived quantities where we have arrays instead of DataFrames or scalars.
-
+    actual_data = exp.derived_quantity(
+        data=data_2x2_pandas, quantity_func=power_spectrum,
+        average_along='temperature')
+    desired_data = data_2x2_pandas_psd_averaged
+    assert_index_equal(actual_data.index,
+            desired_data.index)
+    assert_frame_equal(actual_data.iloc[0, 0],
+            desired_data.iloc[0, 0])
+    assert_frame_equal(actual_data.iloc[1, 0],
+            desired_data.iloc[1, 0])

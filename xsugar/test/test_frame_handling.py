@@ -2,7 +2,7 @@ import pytest
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_index_equal
 from sciparse import assert_equal_qt
-from xsugar import sum_group, average_group, simplify_index, ureg
+from xsugar import sum_group, average_group, simplify_index, ureg, drop_redundants
 
 @pytest.fixture
 def data_1var():
@@ -110,4 +110,25 @@ def test_simplify_index_1D():
     index = pd.MultiIndex.from_tuples(((1,), (2,)), names=['wavelength'])
     desired_index = pd.Index([1, 2], name='wavelength')
     actual_index = simplify_index(index)
+    assert_index_equal(actual_index, desired_index)
+
+def test_remove_duplicate_indices_multi():
+    index_tuples = ((1, 25), (1, 35))
+    duplicate_index = pd.MultiIndex.from_tuples(index_tuples, names=['wavelength', 'temperature'])
+
+    desired_tuples = ((25,), (35,))
+    desired_index = pd.Index([25, 35], name='temperature')
+    actual_index = drop_redundants(duplicate_index)
+    assert_index_equal(actual_index, desired_index)
+
+def test_drop_redundants_single():
+    index = pd.Index([1, 1, 2, 2])
+    desired_index = pd.Index([1, 2])
+    actual_index = drop_redundants(index)
+    assert_index_equal(actual_index, desired_index)
+
+def test_drop_redundants_multi_oneitem():
+    index = pd.MultiIndex.from_tuples(((1,2),), names=['wavelength', 'temperature'])
+    desired_index = index
+    actual_index = drop_redundants(index)
     assert_index_equal(actual_index, desired_index)

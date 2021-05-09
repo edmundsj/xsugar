@@ -1,3 +1,5 @@
+# PROBLEM: If we want to pass around data structures like it's no big deal, do queries on them, etc, then we need derived_quantity to return not just the inner data, but also the condition associated with that data as an index. Right now, it returns different things depending on the nature of the data. In particular, if there is only 1 piece of data, it returns the inner data itself, stripped of the conditions. In hindsight, I don't think this is a good idea.
+
 import itertools
 import numpy as np
 import pandas as pd
@@ -485,7 +487,7 @@ class Experiment:
 
     # This should be generalized into our derived quantity function. This is so close to being our derived quantity function.
     def derived_quantity(self, data=None, average_along=None,
-            sum_along=None, quantity_func=None,
+            sum_along=None, quantity_func=None, quantity_kw={},
             averaging_type='first'):
         """
         User-facing function to average existing data along some axis
@@ -499,8 +501,10 @@ class Experiment:
 
         first_value = data.iloc[0, 0]
 
+        # This should be split off into its own generate_groups function
         if quantity_func is not None:
             groups = data.index
+            index_names = groups.names
             quantity_first = True
         elif quantity_func is None:
             quantity_first = False
@@ -514,25 +518,37 @@ class Experiment:
                 groups.remove(sum_along)
                 quantity_func = sum_group
                 quantity_kw = {'summing_type': averaging_type}
+            index_names = groups
 
 
         return_index_vals = []
         return_data_vals = []
 
-        grouped_data = data.groupby(groups)
+        try:
+            grouped_data = data.groupby(groups)
+            data_name = grouped_data.first().columns.values[0]
+        except:
+            grouped_data = zip((0,), (data,))
+            data_name = data.columns.values[0]
+            index_names = [quantity_func.__name__]
         for ind, sub_data in grouped_data:
+            if len(sub_data) == 1: # pandas accessing is bizarre.
+                sub_data = sub_data.iloc[0, 0]
             new_data = quantity_func(sub_data, **quantity_kw)
 
+            # We get back a DF when we want a scalar.
+            if is_scalar(first_value) and \
+                isinstance(new_data, pd.DataFrame):
+                new_data = new_data.values[0,0]
             return_data_vals.append(new_data)
             if is_collection(ind):
                 return_index_vals.append(tuple(ind))
             else:
                 return_index_vals.append((ind,))
 
-        data_name = grouped_data.first().columns.values[0]
         return_index = pd.MultiIndex.from_tuples(
                 return_index_vals,
-                names=groups)
+                names=index_names)
         return_index = simplify_index(return_index)
         return_values = {data_name: return_data_vals}
         derived_data = pd.DataFrame(index=return_index,
@@ -540,15 +556,13 @@ class Experiment:
 
         if quantity_first == True:
             if average_along is not None:
-                derived_data = average_group(derived_data,
+                derived_data = self.derived_quantity(derived_data,
                         average_along=average_along,
                         averaging_type=averaging_type)
             elif sum_along is not None:
-                derived_data = sum_group(derived_data,
+                derived_data = self.derived_quantity(derived_data,
                         sum_along=sum_along,
-                        summing_type=averaging_type)
-            else:
-                raise ValueError(f'value type you are trying to average is {type(first_value)}. Unsupported type')
+                        averaging_type=averaging_type)
 
         return derived_data
 
@@ -582,7 +596,7 @@ class Experiment:
     # This function is a mess. It needs to be split up into smaller functions. One for legend generation, one for data preparation, etc.
     # that have a clearly-delineated purpose.
     def plot(
-        self, data_dict=None, along=None, sum_along=None,
+        self, data=None, average_along=None, sum_along=None,
         quantity_func=None, representative='',
         plotter=default_plotter, line_kw={}, subplot_kw={}, save_kw = {},
         theory_func=None, theory_kw={},
@@ -607,15 +621,15 @@ class Experiment:
         """
         plotted_figs = []
         plotted_axes = []
-        if along is not None:
+        if average_along is not None:
             if postfix != '': postfix += self.major_separator
             postfix += 'averaged'
         if sum_along is not None:
             if postfix != '': postfix += self.major_separator
             postfix += 'summed'
 
-        if data_dict is None:
-            data_dict = self.data
+        if data is None:
+            data = self.data
 
         if representative:
             data_dict = self.group_data(data_dict, group_along=representative)
@@ -625,26 +639,20 @@ class Experiment:
             postfix += 'representative'
 
         if quantity_func:
-            dict_to_plot = self.derived_quantity(
+            data_to_plot = self.derived_quantity(
                 quantity_func=quantity_func,
-                data_dict=data_dict,
-                along=along,
+                data=data,
+                average_along=average_along,
                 sum_along=sum_along)
         else:
-            dict_to_plot = data_dict
+            data_to_plot = data
 
-        first_value = list(dict_to_plot.values())[0]
-        data_is_scalar = is_scalar(first_value)
-        if data_is_scalar:
-            # Generate a bunch of dictionaries with the appropriate
-            # names from this mmaster table so we can plot them.
-            dict_to_plot = self.master_data_dict(
-                    dict_to_plot, x_axis_include=x_axis_include,
-                    x_axis_exclude=x_axis_exclude,
-                        c_axis_include=c_axis_include,
-                        c_axis_exclude=c_axis_exclude)
-            if dict_to_plot == {}:
-                raise ValueError('ERROR: No plots generated for combination of desired inclusion / exclusion criteria.')
+        dict_to_plot = self.master_data_dict(
+                data_to_plot,
+                x_axis_include=x_axis_include,
+                x_axis_exclude=x_axis_exclude,
+                c_axis_include=c_axis_include,
+                c_axis_exclude=c_axis_exclude)
 
         for name, data in dict_to_plot.items():
             is_pandas = isinstance(data, pd.DataFrame)
@@ -659,6 +667,7 @@ class Experiment:
                         c_factor = k
 
                 for inner_name, inner_data in data.items():
+                    inner_data = inner_data.iloc[0, 0]
                     if theory_exp is not None:
                         theory_data = match_theory_data(inner_name, theory_exp)
                     if not fig:
@@ -710,14 +719,10 @@ class Experiment:
             fig.savefig(full_filename, bbox_inches='tight')
         return plotted_figs, plotted_axes
 
-    def plotPSD(
-            self, along=None, representative=False, **kwargs):
-        def psdFunction(data, cond):
-            return power_spectrum(data, **kwargs)
+    def plotPSD(self, **kwargs):
         self.plot(
-            along=along,
-            quantity_func=psdFunction, plotter=power_spectrum_plot,
-            representative=representative, postfix='PSD')
+            quantity_func=power_spectrum, plotter=power_spectrum_plot,
+            postfix='PSD', **kwargs)
 
     def process(self):
         """
