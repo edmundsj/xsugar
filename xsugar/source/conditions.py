@@ -15,34 +15,6 @@ def is_collection(x):
             is_iterable = False
     return is_iterable
 
-def drop_redundants(x):
-    """
-    Drops redundant values from a collection. If a pandas MultiIndex, drops values from the index which are the same in every index tuple.
-    """
-    if isinstance(x, (list, np.ndarray)):
-        return_vals = []
-        for item in x:
-            if item not in return_vals:
-                return_vals.append(item)
-    elif isinstance(x, pd.Index):
-        first_val = x[0]
-        if is_collection(first_val):
-            redundant_indices = np.ones(len(first_val), dtype=bool)
-            for tup in x:
-                for i, (v1, v2) in enumerate(zip(tup, first_val)):
-                    if v1 != v2:
-                        redundant_indices[i] = False
-            new_index = x
-            reversed_i = [i for i in range(len(redundant_indices))]
-            reversed_i.reverse()
-            for i, val in zip(reversed_i, np.flip(redundant_indices)):
-                if val == True:
-                    new_index = new_index.droplevel(i)
-            return_vals = new_index
-        else:
-             return_vals = x.drop_duplicates()
-
-    return return_vals
 
 def factors_from_condition(cond):
     factors = [x for x in cond.keys()]

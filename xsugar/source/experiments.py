@@ -25,9 +25,10 @@ class Experiment:
     :param verbose: Verbose output enable/disable
     """
 
-    def __init__(self, name, kind, measure_func=None,
-                 ident='', verbose=False,
-                 base_path=None, **kwargs):
+    def __init__(self, name, kind,
+            measure_func=None, end_func=None,
+            ident='', verbose=False,
+            base_path=None, **kwargs):
         if not base_path:
             base_path = str(Path.home())
             if 'LOGNAME' in os.environ:
@@ -46,6 +47,7 @@ class Experiment:
             self.measure_name = measure_func.__name__
         else:
             self.measure_name = None
+        self.end_func = end_func
 
         if kind == 'designs' or kind == 'design':
             self.data_full_path = base_path + '/designs/'+ name + '/data/'
@@ -75,6 +77,8 @@ class Experiment:
         for cond in self.conditions:
             self.executeExperimentCondition(cond, **kwargs)
             if self.verbose == True: print(f"Executing condition {cond}")
+        if self.end_func is not None:
+            self.end_func()
 
     def executeExperimentCondition(self, cond, **kwargs):
         """
@@ -699,6 +703,7 @@ class Experiment:
                 plotted_figs.append(fig)
                 plotted_axes.append(ax)
             elif is_pandas:
+                data = data.iloc[0, 0]
                 fig, ax = plotter(data, line_kw=line_kw,
                         theory_func=theory_func, theory_kw=theory_kw,
                         theory_data=theory_data,

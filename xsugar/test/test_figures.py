@@ -22,6 +22,16 @@ def photovoltage_data():
             data={'series': [raw_data]})
     yield data
 
+@pytest.fixture
+def photovoltage_data_1x2():
+    raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
+                             'Current (mV)': [4,4.5,6]})
+    index = pd.MultiIndex.from_arrays([[1, 1], [25, 35]],
+            names=['wavelength', 'temperature'])
+    data = pd.DataFrame(index=index,
+            data={'series': [raw_data, raw_data]})
+    yield data
+
 
 def testSavePSDFigureFilename(exp, photovoltage_data, convert_name):
     """
@@ -54,27 +64,18 @@ def testSavePSDFigureMultipleFilename(exp, photovoltage_data, convert_name):
     assert_equal(file1_found, True)
     assert_equal(file2_found, True)
 
-def testSavePSDFigureAverageFilename(exp, path_data, convert_name):
+def testSavePSDFigureAverageFilename(exp, photovoltage_data_1x2,
+        convert_name):
     """
     Tests that we successfully created and saved a single PSD figure when
     we want to create an averaged PSD plot
     """
-    raw_data = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                             'Current (mV)': [4,4.5,6]})
-    raw_data_2 = pd.DataFrame({'Time (ms)': [1, 2, 3],
-                             'Current (mV)': [8,4.5,8]})
-    cond = {'wavelength': 1, 'temperature': 25, 'frequency': 8500}
-    condition_name_1 = convert_name('TEST1~replicate=1~temperatures=25~wavelengths=1')
-    condition_name_2 = convert_name('TEST1~replicate=1~temperatures=25~wavelengths=2')
-    filename_desired = convert_name('TEST1~temperatures=25~wavelengths=1~PSD~averaged.png')
-
-    exp.data = {condition_name_1: raw_data,
-                 condition_name_2: raw_data_2}
-    exp.plotPSD(average_along='replicate')
-    file_found = os.path.isfile(path_data['figures_full_path'] + filename_desired)
+    exp.plotPSD(data=photovoltage_data_1x2, average_along='temperature')
+    filename_desired = convert_name('TEST1~wavelength=x~PSD~averaged.png')
+    file_found = os.path.isfile(exp.figures_full_path + filename_desired)
     assert_equal(file_found, True)
 
-def testGenerateTimeDomainPlot(exp, path_data, convert_name):
+def test_save_time_domain_png(exp, path_data, convert_name):
     """
     Tests that we successfully create a simple figure from a single pandas
     array.
