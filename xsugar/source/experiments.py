@@ -1,5 +1,3 @@
-# PROBLEM: If we want to pass around data structures like it's no big deal, do queries on them, etc, then we need derived_quantity to return not just the inner data, but also the condition associated with that data as an index. Right now, it returns different things depending on the nature of the data. In particular, if there is only 1 piece of data, it returns the inner data itself, stripped of the conditions. In hindsight, I don't think this is a good idea.
-
 import itertools
 import numpy as np
 import pandas as pd
